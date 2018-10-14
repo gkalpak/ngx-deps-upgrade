@@ -1,0 +1,19 @@
+os:
+  - linux
+
+dist: trusty
+sudo: false
+
+language: node_js
+node_js:
+  - node
+
+cache:
+  directories:
+    - "$HOME/.npm"
+
+install:
+  - npm ci;
+
+script:
+  - npm test;

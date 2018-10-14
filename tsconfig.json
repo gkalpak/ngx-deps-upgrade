@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2015",
+    "outDir": "out/",
+    "lib": [
+      "es6"
+    ],
+    "sourceMap": true,
+    "rootDir": "src/",
+    "strict": true,
+    "noUnusedLocals": true,
+    "declaration": true,
+    "declarationMap": true,
+    "importHelpers": true,
+    "newLine": "lf"
+  },
+  "include": [
+    "src/"
+  ]
+}
