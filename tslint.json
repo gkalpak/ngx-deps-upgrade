@@ -15,6 +15,7 @@
     "no-console": [false],
     "no-focused-test": true,
     "no-skipped-test": true,
+    "object-literal-key-quotes": [true, "as-needed"],
     "quotemark": [true, "single"],
     "variable-name": [true, "allow-leading-underscore", "allow-trailing-underscore", "ban-keywords", "check-format"]
   },

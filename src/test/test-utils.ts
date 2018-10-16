@@ -6,7 +6,7 @@ export const IS_WINDOWS = (process.platform === 'win32');
 
 export const ROOT_DIR = resolvePath(__dirname, '..');
 
-export function reversePromise(promise: Promise<any>): Promise<any> {
+export function reversePromise(promise: Promise<unknown>): Promise<unknown> {
   return promise.then(val => Promise.reject(val), err => err);
 }
 

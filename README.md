@@ -35,7 +35,8 @@ The following test-types/modes are available:
 
 Things I want to (but won't necessarily) do:
 
-- Complete initial implementation.
+- Add unit and e2e tests.
+- Add more upgradelets.
 
 
 [build-status]: https://travis-ci.org/gkalpak/ngx-deps-upgrade

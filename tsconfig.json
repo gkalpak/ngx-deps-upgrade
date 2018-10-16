@@ -4,7 +4,7 @@
     "target": "es2015",
     "outDir": "out/",
     "lib": [
-      "es6"
+      "es2016"
     ],
     "sourceMap": true,
     "rootDir": "src/",
@@ -13,6 +13,7 @@
     "declaration": true,
     "declarationMap": true,
     "importHelpers": true,
+    "resolveJsonModule": true,
     "newLine": "lf"
   },
   "include": [
