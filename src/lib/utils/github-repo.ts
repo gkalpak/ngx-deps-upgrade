@@ -1,5 +1,12 @@
 import {GithubUtils, IRequestParams} from './github-utils';
 
+export interface IFile {
+  contents_url: string;
+  filename: string;
+  sha: string;
+  status: 'added' | 'modified' | 'removed';
+}
+
 export interface IFileContents {
   content?: string;
   encoding?: 'base64';
@@ -71,6 +78,13 @@ export class GithubRepo {
     const pathname = `repos/${this.owner}/${this.name}/pulls`;
     const payload = {head, base, title, body, maintainer_can_modify: true};
     return this.githubUtils.post(pathname, undefined, payload);
+  }
+
+  public getAffectedFiles(baseSha: string, headSha: string): Promise<IFile[]> {
+    const pathname = `repos/${this.owner}/${this.name}/compare/${baseSha}...${headSha}`;
+    return this.githubUtils.
+      get<{files: IFile[]}>(pathname).
+      then(({files}) => files);
   }
 
   public getAvailableLabelNames(): Promise<string[]> {

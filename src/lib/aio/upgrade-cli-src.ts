@@ -12,6 +12,12 @@ import {GithubRepo, IPullRequest, IPullRequestSearchParams} from '../utils/githu
 
 sh.set('-e');
 
+interface IUpgradeCheckResults {
+  currentSha: string;
+  latestSha: string;
+  needsUpgrade: boolean;
+}
+
 export class Upgradelet extends BaseUpgradelet {
   private static readonly CB_REPO_NAME = 'cli-builds';
   private static readonly AIO_PKG_PATH = 'aio/package.json';
@@ -39,11 +45,13 @@ export class Upgradelet extends BaseUpgradelet {
     try {
       this.utils.logger.info(`Checking and upgrading cli command docs sources for angular.io.`);
 
-      const currentSha = await this.retrieveShaFromAio(branch);
-      const latestSha = await this.retrieveShaFromCliBuilds(branch);
+      const {currentSha, latestSha, needsUpgrade} = await this.checkNeedsUpgrade(branch);
 
-      if (this.shasMatch(currentSha, latestSha)) {
-        this.utils.logger.info(`No upgrade needed. Already using the latest SHA (${currentSha}).`);
+      if (!needsUpgrade) {
+        const reason = this.shasMatch(currentSha, latestSha) ?
+          `Already using the latest SHA (${currentSha}).` :
+          `No 'help/**' files changed between ${currentSha} and ${latestSha}.`;
+        this.utils.logger.info(`No upgrade needed. ${reason}`);
         return;
       }
 
@@ -98,15 +106,25 @@ export class Upgradelet extends BaseUpgradelet {
   public async checkOnly({branch = REPO_INFO.ng.defaultBranch}): Promise<boolean> {
     try {
       this.utils.logger.info(`Checking cli command docs sources for angular.io.`);
-
-      const currentSha = await this.retrieveShaFromAio(branch);
-      const latestSha = await this.retrieveShaFromCliBuilds(branch);
-
-      return this.shasMatch(currentSha, latestSha);
+      return !(await this.checkNeedsUpgrade(branch)).needsUpgrade;
     } catch (err) {
       await this.ignoreError(() => this.reportError('checking only', err));
       throw err;
     }
+  }
+
+  private async checkNeedsUpgrade(branch: string): Promise<IUpgradeCheckResults> {
+    const currentSha = await this.retrieveShaFromAio(branch);
+    const latestSha = await this.retrieveShaFromCliBuilds(branch);
+    let needsUpgrade = !this.shasMatch(currentSha, latestSha);
+
+    if (needsUpgrade) {
+      const affectedFiles = await this.cliBuildsRepo.getAffectedFiles(currentSha, latestSha);
+      const didHelpChange = affectedFiles.some(file => file.filename.startsWith('help/'));
+      needsUpgrade = didHelpChange;
+    }
+
+    return {currentSha, latestSha, needsUpgrade};
   }
 
   private cleanupObsoleteBranches(localRepo: GitRepo, branches: string[], branchesWithOpenPrs: string[]): void {
