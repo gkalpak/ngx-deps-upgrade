@@ -39,7 +39,8 @@ export interface IPullRequestSearchParams extends IRequestParams {
 
 export class GithubRepo {
   public readonly slug = `${this.owner}/${this.name}`;
-  public readonly url = `https://github.com/${this.owner}/${this.name}.git`;
+  public readonly url = `${this.baseUrl}.git`;
+  private readonly baseUrl = `https://github.com/${this.owner}/${this.name}`;
 
   constructor(private readonly githubUtils: GithubUtils, readonly owner: string, readonly name: string) {
   }
@@ -93,6 +94,10 @@ export class GithubRepo {
     return this.githubUtils.
       getPaginated<{name: string}>(pathname).
       then(labels => labels.map(label => label.name));
+  }
+
+  public getCompareUrl(baseSha: string, headSha: string): string {
+    return `${this.baseUrl}/compare/${baseSha}...${headSha}`;
   }
 
   public getFileContents(filePath: string, ref?: string): Promise<string> {

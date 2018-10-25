@@ -8,7 +8,7 @@ import * as sh from 'shelljs';
 import {BaseUpgradelet} from '../utils/base-upgradelet';
 import {GH_TOKEN, REPO_INFO, USER_INFO} from '../utils/constants';
 import {GitRepo} from '../utils/git-repo';
-import {GithubRepo, IPullRequest, IPullRequestSearchParams} from '../utils/github-repo';
+import {GithubRepo, IFile, IPullRequest, IPullRequestSearchParams} from '../utils/github-repo';
 import {stripIndentation} from '../utils/string-utils';
 
 sh.set('-e');
@@ -17,6 +17,7 @@ interface IUpgradeCheckResults {
   currentSha: string;
   latestSha: string;
   needsUpgrade: boolean;
+  affectedFiles: IFile[];
 }
 
 export class Upgradelet extends BaseUpgradelet {
@@ -46,7 +47,7 @@ export class Upgradelet extends BaseUpgradelet {
     try {
       this.utils.logger.info(`Checking and upgrading cli command docs sources for angular.io.`);
 
-      const {currentSha, latestSha, needsUpgrade} = await this.checkNeedsUpgrade(branch);
+      const {currentSha, latestSha, needsUpgrade, affectedFiles} = await this.checkNeedsUpgrade(branch);
 
       if (!needsUpgrade) {
         const reason = this.shasMatch(currentSha, latestSha) ?
@@ -85,9 +86,14 @@ export class Upgradelet extends BaseUpgradelet {
 
       // Submit PR.
       const supercededPrs = Array.from(openPrsPerBranch.values()).reduce((aggr, prs) => aggr.concat(prs), []);
-      const commitMsg = `${commitMsgSubject}\n\n${supercededPrs.map(pr => `Closes #${pr.number}`).join('\n')}`.trim();
-      this.commitAndPush(localRepo, commitMsg);
-      const newPr = await this.submitPullRequest(localBranch, branch, commitMsgSubject);
+      const commitMsgBody = stripIndentation(`
+        [Changed files](${this.cliBuildsRepo.getCompareUrl(currentSha, latestSha)}):
+        ${affectedFiles.map(({filename}) => `- ${filename}`).join('\n')}
+
+        ${supercededPrs.map(pr => `Closes #${pr.number}`).join('\n')}
+      `).trim();
+      this.commitAndPush(localRepo, `${commitMsgSubject}\n\n${commitMsgBody}`);
+      const newPr = await this.submitPullRequest(localBranch, branch, commitMsgSubject, commitMsgBody);
 
       // Comment on superceded PRs.
       // (Do not close them, in case the latest SHA is broken.)
@@ -117,15 +123,14 @@ export class Upgradelet extends BaseUpgradelet {
   private async checkNeedsUpgrade(branch: string): Promise<IUpgradeCheckResults> {
     const currentSha = await this.retrieveShaFromAio(branch);
     const latestSha = await this.retrieveShaFromCliBuilds(branch);
-    let needsUpgrade = !this.shasMatch(currentSha, latestSha);
+    const affectedFiles = [];
 
-    if (needsUpgrade) {
-      const affectedFiles = await this.cliBuildsRepo.getAffectedFiles(currentSha, latestSha);
-      const didHelpChange = affectedFiles.some(file => file.filename.startsWith('help/'));
-      needsUpgrade = didHelpChange;
+    if (!this.shasMatch(currentSha, latestSha)) {
+      const allAffectedFiles = await this.cliBuildsRepo.getAffectedFiles(currentSha, latestSha);
+      affectedFiles.push(...allAffectedFiles.filter(file => file.filename.startsWith('help/')));
     }
 
-    return {currentSha, latestSha, needsUpgrade};
+    return {currentSha, latestSha, affectedFiles, needsUpgrade: affectedFiles.length > 0};
   }
 
   private cleanupObsoleteBranches(localRepo: GitRepo, branches: string[], branchesWithOpenPrs: string[]): void {
@@ -291,14 +296,19 @@ export class Upgradelet extends BaseUpgradelet {
     }
   }
 
-  private async submitPullRequest(originBranch: string, upstreamBranch: string, title: string): Promise<IPullRequest> {
+  private async submitPullRequest(
+      originBranch: string,
+      upstreamBranch: string,
+      title: string,
+      body?: string,
+  ): Promise<IPullRequest> {
     const src = `${this.originRepo.slug}#${originBranch}`;
     const dst = `${this.upstreamRepo.slug}#${upstreamBranch}`;
 
     this.utils.logger.info(`  Submitting pull request from '${src}' to '${dst}'.`);
 
     const head = `${this.originRepo.owner}:${originBranch}`;
-    const pr = await this.upstreamRepo.createPullRequest(head, upstreamBranch, title);
+    const pr = await this.upstreamRepo.createPullRequest(head, upstreamBranch, title, body);
 
     await this.ignoreError(() => this.upstreamRepo.addLabels(pr.number, Upgradelet.PR_LABELS));
 
