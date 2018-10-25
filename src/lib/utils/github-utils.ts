@@ -2,6 +2,7 @@ import {OutgoingHttpHeaders, RequestOptions} from 'http';
 import {GH_TOKEN_NAMES, VERSION_STAMP} from './constants';
 import {HttpsUtils, IJsonResponse} from './https-utils';
 import {Logger} from './logger';
+import {stripIndentation} from './string-utils';
 
 export interface IRequestParams {
   [key: string]: string | number | undefined;
@@ -98,10 +99,10 @@ export class GithubUtils {
 
     if (this.showTokenWarning) {
       this.showTokenWarning = false;
-      this.logger.warn(
-        `No GitHub access token found in environment variable ${GH_TOKEN_NAMES.join(' or ')}.\n` +
-        'Proceeding anonymously (and subject to rate-limiting)...');
-
+      this.logger.warn(stripIndentation(`
+        No GitHub access token found in environment variable ${GH_TOKEN_NAMES.join(' or ')}.
+        Proceeding anonymously (and subject to rate-limiting)...
+      `));
     }
 
     return {url, options};

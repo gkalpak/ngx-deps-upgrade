@@ -1,4 +1,5 @@
 import {GithubUtils, IRequestParams} from './github-utils';
+import {stripIndentation} from './string-utils';
 
 export interface IFile {
   contents_url: string;
@@ -97,9 +98,10 @@ export class GithubRepo {
   public getFileContents(filePath: string, ref?: string): Promise<string> {
     return this.getFileContentsRaw(filePath, ref).then(res => {
       if ((res.content === undefined) || (res.encoding !== 'base64')) {
-        throw new Error(
-            `Unexpected response for file contents request (the resource may not be a file):\n` +
-            JSON.stringify(res, null, 2));
+        throw new Error(stripIndentation(`
+          Unexpected response for file contents request (the resource may not be a file):
+          ${JSON.stringify(res, null, 2)}
+        `));
       }
 
       return this.decodeBase64(res.content);

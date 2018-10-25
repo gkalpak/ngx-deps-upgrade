@@ -9,6 +9,7 @@ import {BaseUpgradelet} from '../utils/base-upgradelet';
 import {GH_TOKEN, REPO_INFO, USER_INFO} from '../utils/constants';
 import {GitRepo} from '../utils/git-repo';
 import {GithubRepo, IPullRequest, IPullRequestSearchParams} from '../utils/github-repo';
+import {stripIndentation} from '../utils/string-utils';
 
 sh.set('-e');
 
@@ -218,14 +219,20 @@ export class Upgradelet extends BaseUpgradelet {
 
     this.utils.logger.info(`  Reporting error while ${action}.`);
 
-    const codeBlock = (header: string, code: string) =>
-      `**${header}:**\n\`\`\`\n${code}\n\`\`\`\n`;
+    const codeBlock = (header: string, code: string) => stripIndentation(`
+      **${header}:**
+      \`\`\`
+      ${code}
+      \`\`\`
+    `);
 
     const title = `[${Upgradelet.LOCAL_BRANCH_PREFIX}] Error while ${action}`;
-    const body =
-        codeBlock('Error', this.stringifyError(err)) +
-        '\n##\n' +
-        codeBlock('Logs', this.utils.logger.getLogs().join('\n'));
+    const body = stripIndentation(`
+      ${codeBlock('Error', this.stringifyError(err))}
+
+      ##
+      ${codeBlock('Logs', this.utils.logger.getLogs().join('\n'))}
+    `);
 
     const thisRepo = new GithubRepo(this.utils.githubUtils, REPO_INFO.own.originOwner, REPO_INFO.own.originName);
     await thisRepo.createIssue(title, body);
@@ -242,9 +249,10 @@ export class Upgradelet extends BaseUpgradelet {
     const cliSrcShaMatch = Upgradelet.AIO_SCRIPT_RE.exec(cliSrcScript);
 
     if (!cliSrcScript || !cliSrcShaMatch) {
-      throw new Error(
-          `Unable to extract the SHA for cli sources from '${source}'.\n` +
-          `The '${Upgradelet.AIO_SCRIPT_NAME}' script is missing or has unexpected format.`);
+      throw new Error(stripIndentation(`
+        Unable to extract the SHA for cli sources from '${source}'.
+        The '${Upgradelet.AIO_SCRIPT_NAME}' script is missing or has unexpected format.
+      `));
     }
 
     return cliSrcShaMatch[1];
@@ -258,9 +266,10 @@ export class Upgradelet extends BaseUpgradelet {
     const cliSrcSha = await this.cliBuildsRepo.getLatestSha(branch);
 
     if (!cliSrcSha) {
-      throw new Error(
-          `Unable to extract the SHA for cli sources from '${source}'.\n` +
-          `The SHA is empty.`);
+      throw new Error(stripIndentation(`
+        Unable to extract the SHA for cli sources from '${source}'.
+        The SHA is empty.
+      `));
     }
 
     return cliSrcSha.slice(0, 9);
