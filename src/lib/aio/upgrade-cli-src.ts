@@ -224,20 +224,14 @@ export class Upgradelet extends BaseUpgradelet {
 
     this.utils.logger.info(`  Reporting error while ${action}.`);
 
-    const codeBlock = (header: string, code: string) => stripIndentation(`
-      **${header}:**
-      \`\`\`
-      ${code}
-      \`\`\`
-    `);
+    const codeBlock = (header: string, code: string) =>
+      `**${header}:**\n\`\`\`\n${stripIndentation(code)}\n\`\`\`\n`;
 
     const title = `[${Upgradelet.LOCAL_BRANCH_PREFIX}] Error while ${action}`;
-    const body = stripIndentation(`
-      ${codeBlock('Error', this.stringifyError(err))}
-
-      ##
-      ${codeBlock('Logs', this.utils.logger.getLogs().join('\n'))}
-    `);
+    const body =
+      codeBlock('Error', this.stringifyError(err)) +
+      '\n##\n' +
+      codeBlock('Logs', this.utils.logger.getLogs().join('\n'));
 
     const thisRepo = new GithubRepo(this.utils.githubUtils, REPO_INFO.own.originOwner, REPO_INFO.own.originName);
     await thisRepo.createIssue(title, body);
