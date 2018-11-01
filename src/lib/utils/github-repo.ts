@@ -38,9 +38,11 @@ export interface IPullRequestSearchParams extends IRequestParams {
 }
 
 export class GithubRepo {
+  // tslint:disable: member-ordering
+  private readonly baseUrl = `https://github.com/${this.owner}/${this.name}`;
   public readonly slug = `${this.owner}/${this.name}`;
   public readonly url = `${this.baseUrl}.git`;
-  private readonly baseUrl = `https://github.com/${this.owner}/${this.name}`;
+  // tslint:enable: member-ordering
 
   constructor(private readonly githubUtils: GithubUtils, readonly owner: string, readonly name: string) {
   }
