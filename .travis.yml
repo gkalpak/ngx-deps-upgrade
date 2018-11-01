@@ -17,8 +17,6 @@ install:
 
 script:
   - npm test;
-
-after_success:
-  - if [[ "$TRAVIS_EVENT_TYPE" == "cron" ]]; then
+  - if ([[ "$TRAVIS_TEST_RESULT" == "0" ]] && [[ "$TRAVIS_EVENT_TYPE" == "cron" ]]); then
       npm start;
     fi
