@@ -86,13 +86,13 @@ export class Upgradelet extends BaseUpgradelet {
 
       // Submit PR.
       const supercededPrs = Array.from(openPrsPerBranch.values()).reduce((aggr, prs) => aggr.concat(prs), []);
-      const commitMsgBody = stripIndentation(`
-        [Changed files](${this.cliBuildsRepo.getCompareUrl(currentSha, latestSha)}):
-        ${affectedFiles.map(({filename}) => `- ${filename}`).join('\n')}
-
-        ${supercededPrs.map(pr => `Closes #${pr.number}`).join('\n')}
-      `).trim();
-      this.commitAndPush(localRepo, `${commitMsgSubject}\n\n${commitMsgBody}`);
+      const commitMsgBody = [
+        `[Changed files](${this.cliBuildsRepo.getCompareUrl(currentSha, latestSha)}):`,
+        ...affectedFiles.map(({filename}) => `- ${filename}`),
+        '',
+        ...supercededPrs.map(pr => `Closes #${pr.number}`),
+      ].join('\n').trim();
+      this.commitAndPush(localRepo, `${commitMsgSubject}\n\n${commitMsgBody}\n`);
       const newPr = await this.submitPullRequest(localBranch, branch, commitMsgSubject, commitMsgBody);
 
       // Comment on superceded PRs.
