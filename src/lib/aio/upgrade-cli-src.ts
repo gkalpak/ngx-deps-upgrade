@@ -42,6 +42,8 @@ export class Upgradelet extends BaseUpgradelet {
       new GithubRepo(this.utils.githubUtils, REPO_INFO.ng.upstreamOwner, Upgradelet.CB_REPO_NAME);
 
   public async checkAndUpgrade({branch = REPO_INFO.ng.defaultBranch}): Promise<void> {
+    const cleanUpFns: Array<() => unknown> = [];
+
     try {
       this.utils.logger.info(`Checking and upgrading cli command docs sources for angular.io.`);
 
@@ -57,9 +59,11 @@ export class Upgradelet extends BaseUpgradelet {
 
       this.utils.logger.info(`Upgrade needed: ${currentSha} --> ${latestSha}`);
 
+      // Initialize local repo clone.
       const localBranch = `${Upgradelet.LOCAL_BRANCH_PREFIX}--${branch}--${latestSha}`;
       const commitMsgSubject = `${Upgradelet.COMMIT_MESSAGE_PREFIX}${latestSha}`;
       const localRepo = this.initLocalRepo();
+      cleanUpFns.push(() => localRepo.destroy());
 
       // Update/Clean up old PRs.
       const relevantBranches = localRepo.
@@ -97,13 +101,15 @@ export class Upgradelet extends BaseUpgradelet {
       // (Do not close them, in case the latest SHA is broken.)
       await this.ignoreError(() => this.commentOnSupercededPrs(supercededPrs, newPr));
 
-      // Perform local clean-up.
-      await this.ignoreError(() => localRepo.destroy());
-
       this.utils.logger.info(`Upgrade completed successfully \\o/ | PR: #${newPr.number} (${newPr.html_url})`);
     } catch (err) {
       await this.ignoreError(() => this.reportError('checking and upgrading', err));
       throw err;
+    } finally {
+      // Perform clean-up (in reverse "chronological" order).
+      cleanUpFns.
+        reverse().
+        reduce((prev, fn) => prev.then(() => this.ignoreError(fn)), Promise.resolve());
     }
   }
 
@@ -132,6 +138,9 @@ export class Upgradelet extends BaseUpgradelet {
 
   private cleanupObsoleteBranches(localRepo: GitRepo, branches: string[], branchesWithOpenPrs: string[]): void {
     const branchesWithoutOpenPrs = branches.filter(branch => !branchesWithOpenPrs.includes(branch));
+
+    this.utils.logger.info(`  Cleaning up obsolete branches: ${branchesWithoutOpenPrs.join(', ')}`);
+
     branchesWithoutOpenPrs.forEach(branch => localRepo.deleteRemoteBranch(GitRepo.ORIGIN, branch));
   }
 
