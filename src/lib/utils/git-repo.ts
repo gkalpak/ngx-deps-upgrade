@@ -41,6 +41,13 @@ export class GitRepo {
     this.push(remote, '', branch);
   }
 
+  public destroy(): void {
+    if (!this.destroyed) {
+      sh.rm('-rf', this.directory);
+      this.destroyed = true;
+    }
+  }
+
   public fetch(remote: string, opts?: ICommnandOptions): void;
   public fetch(remote: string, branch: string, opts?: ICommnandOptions): void;
   public fetch(remote: string, branch?: string | ICommnandOptions, opts?: ICommnandOptions): void {
@@ -86,13 +93,6 @@ export class GitRepo {
     }
 
     this.execInRepo(`git push ${remote} ${localBranch}:${remoteBranch}`, opts);
-  }
-
-  public destroy(): void {
-    if (!this.destroyed) {
-      sh.rm('-rf', this.directory);
-      this.destroyed = true;
-    }
   }
 
   public setUserInfo(name: string, email: string, ghToken?: string): void {
