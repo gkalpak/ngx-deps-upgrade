@@ -1,4 +1,5 @@
-import {basename} from 'path';
+import {tmpdir} from 'os';
+import {basename, join} from 'path';
 import * as sh from 'shelljs';
 import {Logger} from './logger';
 
@@ -14,6 +15,7 @@ export class GitRepo {
     return this.execInRepo('git rev-parse --abbrev-ref HEAD').toString().trim();
   }
   public readonly name = basename(this.directory);
+  private readonly credentialsPath = join(tmpdir(), `.git/.git-credentials--${Date.now()}`);
   private destroyed = false;
 
   constructor(private readonly logger: Logger, readonly directory: string) {
@@ -91,6 +93,18 @@ export class GitRepo {
     if (!this.destroyed) {
       sh.rm('-rf', this.directory);
       this.destroyed = true;
+    }
+  }
+
+  public setUserInfo(name: string, email: string, ghToken?: string): void {
+    this.config('user.name', `"${name}"`);
+    this.config('user.email', `"${email}"`);
+
+    if (ghToken) {
+      sh.ShellString(`https://${ghToken}:@github.com`).to(this.credentialsPath);
+      sh.chmod('go-rwx', this.credentialsPath);
+
+      this.config('credential.helper', `"store --file=${this.credentialsPath}"`);
     }
   }
 

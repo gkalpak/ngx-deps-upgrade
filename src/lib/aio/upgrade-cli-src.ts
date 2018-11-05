@@ -1,7 +1,6 @@
 /**
  * Upgrade the `@angular/cli` sources used to build cli commands docs for `angular.io`.
  */
-import {writeFileSync} from 'fs';
 import {tmpdir} from 'os';
 import {join, parse} from 'path';
 import * as sh from 'shelljs';
@@ -27,7 +26,6 @@ export class Upgradelet extends BaseUpgradelet {
   private static readonly AIO_SCRIPT_RE = /^node \S+ ([\da-f]+)$/;
   private static readonly LOCAL_BRANCH_PREFIX = parse(__filename).name;
   private static readonly COMMIT_MESSAGE_PREFIX = 'build(docs-infra): upgrade cli command docs sources to ';
-  private static readonly CREDENTIALS_PATH = join(tmpdir(), `.git-credentials--${Upgradelet.LOCAL_BRANCH_PREFIX}`);
   private static readonly PR_LABELS = [
     'comp: build & ci',
     'comp: docs-infra',
@@ -104,7 +102,6 @@ export class Upgradelet extends BaseUpgradelet {
 
       this.utils.logger.info(`Upgrade completed successfully \\o/ | PR: #${newPr.number} (${newPr.html_url})`);
     } catch (err) {
-      await this.ignoreError(() => sh.rm('-f', Upgradelet.CREDENTIALS_PATH));
       await this.ignoreError(() => this.reportError('checking and upgrading', err));
       throw err;
     }
@@ -199,14 +196,8 @@ export class Upgradelet extends BaseUpgradelet {
     localRepo.addRemote(GitRepo.UPSTREAM, this.upstreamRepo.url);
 
     if (process.env.CI) {
-      this.utils.logger.info(`  Configuring local git repo on CI (user.name, user.email, credentials).`);
-
-      writeFileSync(Upgradelet.CREDENTIALS_PATH, `https://${GH_TOKEN}:@github.com`);
-      sh.chmod('go-rwx', Upgradelet.CREDENTIALS_PATH);
-
-      localRepo.config('credential.helper', `"store --file=${Upgradelet.CREDENTIALS_PATH}"`);
-      localRepo.config('user.name', `"${USER_INFO.name}"`);
-      localRepo.config('user.email', `"${USER_INFO.email}"`);
+      this.utils.logger.info(`  Setting user info on local git repo on CI (user.name, user.email, credentials).`);
+      localRepo.setUserInfo(USER_INFO.name, USER_INFO.email, GH_TOKEN);
     }
 
     return localRepo;
