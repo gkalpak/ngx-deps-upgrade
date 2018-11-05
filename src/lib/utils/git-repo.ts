@@ -1,4 +1,3 @@
-import {tmpdir} from 'os';
 import {basename, join} from 'path';
 import * as sh from 'shelljs';
 import {Logger} from './logger';
@@ -15,7 +14,7 @@ export class GitRepo {
     return this.execInRepo('git rev-parse --abbrev-ref HEAD').toString().trim();
   }
   public readonly name = basename(this.directory);
-  private readonly credentialsPath = join(tmpdir(), `.git/.git-credentials--${Date.now()}`);
+  private readonly credentialsPath = join(this.directory, `.git/.git-credentials--${Date.now()}`);
   private destroyed = false;
 
   constructor(private readonly logger: Logger, readonly directory: string) {
