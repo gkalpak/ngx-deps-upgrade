@@ -1,5 +1,5 @@
+import {stripIndentation} from './common-utils';
 import {GithubUtils, IRequestParams} from './github-utils';
-import {stripIndentation} from './string-utils';
 
 export interface IFile {
   contents_url: string;

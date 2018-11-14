@@ -1,8 +1,8 @@
 import {OutgoingHttpHeaders, RequestOptions} from 'http';
+import {stripIndentation} from './common-utils';
 import {GH_TOKEN_NAMES, VERSION_STAMP} from './constants';
 import {HttpsUtils, IJsonResponse} from './https-utils';
 import {Logger} from './logger';
-import {stripIndentation} from './string-utils';
 
 export interface IRequestParams {
   [key: string]: string | number | undefined;

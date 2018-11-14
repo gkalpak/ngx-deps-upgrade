@@ -5,10 +5,10 @@ import {tmpdir} from 'os';
 import {join, parse} from 'path';
 import * as sh from 'shelljs';
 import {BaseUpgradelet} from '../utils/base-upgradelet';
+import {stripIndentation} from '../utils/common-utils';
 import {GH_TOKEN, REPO_INFO, USER_INFO} from '../utils/constants';
 import {GitRepo} from '../utils/git-repo';
 import {GithubRepo, IFile, IPullRequest, IPullRequestSearchParams} from '../utils/github-repo';
-import {stripIndentation} from '../utils/string-utils';
 
 sh.set('-e');
 
