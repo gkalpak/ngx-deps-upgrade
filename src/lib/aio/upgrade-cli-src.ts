@@ -5,7 +5,7 @@ import {tmpdir} from 'os';
 import {join, parse} from 'path';
 import * as sh from 'shelljs';
 import {BaseUpgradelet} from '../utils/base-upgradelet';
-import {stripIndentation} from '../utils/common-utils';
+import {capitalize, group, stripIndentation} from '../utils/common-utils';
 import {GH_TOKEN, REPO_INFO, USER_INFO} from '../utils/constants';
 import {GitRepo} from '../utils/git-repo';
 import {GithubRepo, IFile, IPullRequest, IPullRequestSearchParams} from '../utils/github-repo';
@@ -89,8 +89,8 @@ export class Upgradelet extends BaseUpgradelet {
       // Submit PR.
       const supercededPrs = Array.from(openPrsPerBranch.values()).reduce((aggr, prs) => aggr.concat(prs), []);
       const commitMsgBody = [
-        `[Changed files](${this.cliBuildsRepo.getCompareUrl(currentSha, latestSha)}):`,
-        ...affectedFiles.map(({filename}) => `- ${filename}`),
+        `Relevant changes in [commit range](${this.cliBuildsRepo.getCompareUrl(currentSha, latestSha)}):`,
+        this.stringifyAffectedFiles(affectedFiles),
         '',
         ...supercededPrs.map(pr => `Closes #${pr.number}`),
       ].join('\n').trim();
@@ -276,6 +276,18 @@ export class Upgradelet extends BaseUpgradelet {
 
   private shasMatch(sha1: string, sha2: string): boolean {
     return sha1.startsWith(sha2) || sha2.startsWith(sha1);
+  }
+
+  private stringifyAffectedFiles(affectedFiles: IFile[]): string {
+    const filesPerStatus = group(affectedFiles, 'status');
+    const statuses = Array.from(filesPerStatus.keys()).sort();
+
+    return statuses.
+      map(status => [
+        `**${capitalize(status)}**`,
+        ...filesPerStatus.get(status)!.map(({filename}) => `- ${filename}`),
+      ].join('\n')).
+      join('\n\n');
   }
 
   private stringifyError(err: any): string {
