@@ -90,6 +90,7 @@ export class Upgradelet extends BaseUpgradelet {
       const supercededPrs = Array.from(openPrsPerBranch.values()).reduce((aggr, prs) => aggr.concat(prs), []);
       const commitMsgBody = [
         `Relevant changes in [commit range](${this.cliBuildsRepo.getCompareUrl(currentSha, latestSha)}):`,
+        '',
         this.stringifyAffectedFiles(affectedFiles),
         '',
         ...supercededPrs.map(pr => `Closes #${pr.number}`),
