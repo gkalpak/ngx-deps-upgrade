@@ -87,7 +87,9 @@ export class Upgradelet extends BaseUpgradelet {
       this.makeChanges(localRepo, currentSha, latestSha);
 
       // Submit PR.
-      const supercededPrs = Array.from(openPrsPerBranch.values()).reduce((aggr, prs) => aggr.concat(prs), []);
+      const supercededPrs = Array.from(openPrsPerBranch.values()).
+        reduce((aggr, prs) => aggr.concat(prs), []).
+        sort((a, b) => a.number - b.number);
       const commitMsgBody = [
         `Relevant changes in [commit range](${this.cliBuildsRepo.getCompareUrl(currentSha, latestSha)}):`,
         '',
