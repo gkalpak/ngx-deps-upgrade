@@ -1,5 +1,6 @@
 import {basename, join} from 'path';
 import * as sh from 'shelljs';
+import {NEWLINE_PLACEHOLDER} from '../utils/constants';
 import {Logger} from './logger';
 
 export interface ICommnandOptions {
@@ -9,6 +10,9 @@ export interface ICommnandOptions {
 export class GitRepo {
   public static readonly ORIGIN = 'origin';
   public static readonly UPSTREAM = 'upstream';
+  private static readonly FIX_COMMIT_MESSAGE_NEWLINES_SCRIPT_PATH = require.
+    resolve('./fix-commit-message-newlines').
+    replace(/\\/g, '/');
 
   public get currentBranch(): string {
     return this.execInRepo('git rev-parse --abbrev-ref HEAD').toString().trim();
@@ -30,7 +34,14 @@ export class GitRepo {
   }
 
   public commit(msg: string, opts?: ICommnandOptions): void {
-    this.execInRepo(`git commit`, {...opts, message: msg.split(/\r?\n/).map(m => `"${m}"`)});
+    // Preprocess commit message.
+    const tempMsgArg = `"${msg.trim().split(/\r?\n/).join(NEWLINE_PLACEHOLDER)}"`;
+
+    // Commit.
+    this.execInRepo(`git commit`, {...opts, message: tempMsgArg});
+
+    // Postprocess commit message.
+    this.execInRepo(`git filter-branch --msg-filter "node ${GitRepo.FIX_COMMIT_MESSAGE_NEWLINES_SCRIPT_PATH}" @~1..@`);
   }
 
   public config(key: string, value: string): void {

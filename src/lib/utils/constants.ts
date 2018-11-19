@@ -18,6 +18,7 @@ export const GH_TOKEN_NAMES = [ghTokenNamePackage, ghTokenNameGeneric];
 export const GH_TOKEN = GH_TOKEN_NAMES.
   reduce<string | undefined>((token, name) => token || process.env[name], undefined);
 
+export const NEWLINE_PLACEHOLDER = '{NL}';
 export const PARSED_ARGS: IParsedArgs = minimist(process.argv);
 export const REPO_INFO = {
   ng: {
