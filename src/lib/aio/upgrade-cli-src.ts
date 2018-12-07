@@ -46,7 +46,7 @@ export class Upgradelet extends BaseUpgradelet {
     try {
       this.utils.logger.info(`Checking and upgrading cli command docs sources for angular.io.`);
 
-      const {ngBranch, cliBranch} = this.computeBranches(branch);
+      const {ngBranch, cliBranch} = await this.computeBranches(branch);
       const {currentSha, latestSha, needsUpgrade, affectedFiles} = await this.checkNeedsUpgrade(ngBranch, cliBranch);
 
       if (!needsUpgrade) {
@@ -119,7 +119,7 @@ export class Upgradelet extends BaseUpgradelet {
   public async checkOnly({branch = REPO_INFO.ng.defaultBranch}: IParsedArgs): Promise<boolean> {
     try {
       this.utils.logger.info(`Checking cli command docs sources for angular.io.`);
-      const {ngBranch, cliBranch} = this.computeBranches(branch);
+      const {ngBranch, cliBranch} = await this.computeBranches(branch);
       return !(await this.checkNeedsUpgrade(ngBranch, cliBranch)).needsUpgrade;
     } catch (err) {
       await this.ignoreError(() => this.reportError('checking only', err));
@@ -161,8 +161,43 @@ export class Upgradelet extends BaseUpgradelet {
     localRepo.push(GitRepo.ORIGIN, {force: true});
   }
 
-  private computeBranches(branchSpec: NonNullable<IParsedArgs['branch']>): {ngBranch: string, cliBranch: string} {
-    return {ngBranch: branchSpec, cliBranch: branchSpec};
+  private async computeBranches(
+      branchSpec: NonNullable<IParsedArgs['branch']>,
+  ): Promise<{ngBranch: string, cliBranch: string}> {
+    switch (branchSpec) {
+      case 'master':
+        return {ngBranch: branchSpec, cliBranch: branchSpec};
+      case 'stable':
+        const ngLatestTagCmd = `npm info ${REPO_INFO.ng.npmPackage} dist-tags.latest`;
+        this.utils.logger.debug(`EXEC: ${ngLatestTagCmd}`);
+
+        const ngLatestTag = (sh.exec(ngLatestTagCmd, {silent: true}) as sh.ExecOutputReturnValue).stdout.trim();
+        const ngVersionMatch = ngLatestTag.match(/^(\d+)\.(\d+)\.\d+/);
+
+        if (!ngVersionMatch) {
+          throw new Error(`No valid latest tag found for 'npm:${REPO_INFO.ng.npmPackage}': ${ngLatestTag}`);
+        }
+
+        const [, ngMajor, ngMinor] = ngVersionMatch;
+        const stableNgBranch = `${ngMajor}.${ngMinor}.x`;
+
+        const cliBranches = await this.cliBuildsRepo.getBranchNames();
+        const stableCliBranchRe = new RegExp(`^${ngMajor}\\.(\\d+)\\.x$`);
+        const stableCliBranch = cliBranches.
+          map(branch => branch.match(stableCliBranchRe)).
+          filter((match): match is RegExpMatchArray => !!match).
+          sort(([b1, cliMinor1], [b2, cliMinor2]) => +cliMinor1 - +cliMinor2).
+          map(([branch]) => branch).
+          pop();
+
+        if (!stableCliBranch) {
+          throw new Error(`No 'cli-builds' branch found matching '${stableCliBranchRe}'.`);
+        }
+
+        return {ngBranch: stableNgBranch, cliBranch: stableCliBranch};
+      default:
+        throw new Error(`Unexpected 'branch' value (${branchSpec}). Expected one of: master, stable.`);
+    }
   }
 
   private createLocalBranch(localRepo: GitRepo, localBranch: string, branch: string): void {

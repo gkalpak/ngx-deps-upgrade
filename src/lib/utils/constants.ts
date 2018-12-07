@@ -24,6 +24,7 @@ export const PARSED_ARGS: IParsedArgs = minimist(process.argv);
 export const REPO_INFO = {
   ng: {
     defaultBranch: 'master' as NonNullable<IParsedArgs['branch']>,
+    npmPackage: '@angular/core',
     originOwner: thisOriginOwner,
     upstreamName: 'angular',
     upstreamOwner: 'angular',
