@@ -98,6 +98,13 @@ export class GithubRepo {
       then(labels => labels.map(label => label.name));
   }
 
+  public getBranchNames(): Promise<string[]> {
+    const pathname = `repos/${this.owner}/${this.name}/branches`;
+    return this.githubUtils.
+      getPaginated<{name: string}>(pathname).
+      then(branches => branches.map(branch  => branch.name));
+  }
+
   public getCompareUrl(baseSha: string, headSha: string): string {
     return `${this.baseUrl}/compare/${baseSha}...${headSha}`;
   }
