@@ -6,6 +6,7 @@ import {resolve} from 'path';
 const pkg = require('../../../package.json');
 
 export interface IParsedArgs {
+  branch?: 'master' | 'stable';
   [key: string]: unknown;
 }
 
@@ -22,7 +23,7 @@ export const NEWLINE_PLACEHOLDER = '{NL}';
 export const PARSED_ARGS: IParsedArgs = minimist(process.argv);
 export const REPO_INFO = {
   ng: {
-    defaultBranch: 'master',
+    defaultBranch: 'master' as NonNullable<IParsedArgs['branch']>,
     originOwner: thisOriginOwner,
     upstreamName: 'angular',
     upstreamOwner: 'angular',

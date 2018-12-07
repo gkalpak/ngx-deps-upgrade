@@ -30,7 +30,6 @@ export class Upgradelet extends BaseUpgradelet {
     'comp: build & ci',
     'comp: docs-infra',
     'PR action: review',
-    'PR target: TBD',
   ];
   private static readonly REPORT_ERRORS = !!process.env.CI;
 
@@ -47,7 +46,8 @@ export class Upgradelet extends BaseUpgradelet {
     try {
       this.utils.logger.info(`Checking and upgrading cli command docs sources for angular.io.`);
 
-      const {currentSha, latestSha, needsUpgrade, affectedFiles} = await this.checkNeedsUpgrade(branch);
+      const {ngBranch, cliBranch} = this.computeBranches(branch);
+      const {currentSha, latestSha, needsUpgrade, affectedFiles} = await this.checkNeedsUpgrade(ngBranch, cliBranch);
 
       if (!needsUpgrade) {
         const reason = this.shasMatch(currentSha, latestSha) ?
@@ -83,7 +83,7 @@ export class Upgradelet extends BaseUpgradelet {
       }
 
       // Make changes.
-      this.createLocalBranch(localRepo, localBranch, branch);
+      this.createLocalBranch(localRepo, localBranch, ngBranch);
       this.makeChanges(localRepo, currentSha, latestSha);
 
       // Submit PR.
@@ -98,7 +98,7 @@ export class Upgradelet extends BaseUpgradelet {
         ...supercededPrs.map(pr => `Closes #${pr.number}`),
       ].join('\n').trim();
       this.commitAndPush(localRepo, `${commitMsgSubject}\n\n${commitMsgBody}\n`);
-      const newPr = await this.submitPullRequest(localBranch, branch, commitMsgSubject, commitMsgBody);
+      const newPr = await this.submitPullRequest(localBranch, ngBranch, commitMsgSubject, commitMsgBody);
 
       // Comment on superceded PRs.
       // (Do not close them, in case the latest SHA is broken.)
@@ -119,16 +119,17 @@ export class Upgradelet extends BaseUpgradelet {
   public async checkOnly({branch = REPO_INFO.ng.defaultBranch}: IParsedArgs): Promise<boolean> {
     try {
       this.utils.logger.info(`Checking cli command docs sources for angular.io.`);
-      return !(await this.checkNeedsUpgrade(branch)).needsUpgrade;
+      const {ngBranch, cliBranch} = this.computeBranches(branch);
+      return !(await this.checkNeedsUpgrade(ngBranch, cliBranch)).needsUpgrade;
     } catch (err) {
       await this.ignoreError(() => this.reportError('checking only', err));
       throw err;
     }
   }
 
-  private async checkNeedsUpgrade(branch: string): Promise<IUpgradeCheckResults> {
-    const currentSha = await this.retrieveShaFromAio(branch);
-    const latestSha = await this.retrieveShaFromCliBuilds(branch);
+  private async checkNeedsUpgrade(ngBranch: string, cliBranch: string): Promise<IUpgradeCheckResults> {
+    const currentSha = await this.retrieveShaFromAio(ngBranch);
+    const latestSha = await this.retrieveShaFromCliBuilds(cliBranch);
     const affectedFiles = [];
 
     if (!this.shasMatch(currentSha, latestSha)) {
@@ -158,6 +159,10 @@ export class Upgradelet extends BaseUpgradelet {
     localRepo.commit(commitMsg, {all: true});
     localRepo.fetch(GitRepo.ORIGIN, {unshallow: true});
     localRepo.push(GitRepo.ORIGIN, {force: true});
+  }
+
+  private computeBranches(branchSpec: NonNullable<IParsedArgs['branch']>): {ngBranch: string, cliBranch: string} {
+    return {ngBranch: branchSpec, cliBranch: branchSpec};
   }
 
   private createLocalBranch(localRepo: GitRepo, localBranch: string, branch: string): void {
@@ -319,7 +324,8 @@ export class Upgradelet extends BaseUpgradelet {
     const head = `${this.originRepo.owner}:${originBranch}`;
     const pr = await this.upstreamRepo.createPullRequest(head, upstreamBranch, title, body);
 
-    await this.ignoreError(() => this.upstreamRepo.addLabels(pr.number, Upgradelet.PR_LABELS));
+    const targetLabel = `PR target: ${(upstreamBranch === 'master') ? 'master-only' : 'patch-only'}`;
+    await this.ignoreError(() => this.upstreamRepo.addLabels(pr.number, [...Upgradelet.PR_LABELS, targetLabel]));
 
     return pr;
   }
