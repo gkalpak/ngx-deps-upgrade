@@ -3,10 +3,6 @@ import * as utils from '.';
 import {IParsedArgs, PARSED_ARGS} from './constants';
 
 
-export interface IParsedArgs {
-  [key: string]: unknown;
-}
-
 export abstract class BaseUpgradelet {
   /**
    * Instantiate this `Upgradelet` (a `BaseUpgradelet` subclass) and run `checkAndUpgrade()`.

@@ -6,7 +6,7 @@ import {join, parse} from 'path';
 import * as sh from 'shelljs';
 import {BaseUpgradelet} from '../utils/base-upgradelet';
 import {capitalize, group, stripIndentation} from '../utils/common-utils';
-import {GH_TOKEN, REPO_INFO, USER_INFO} from '../utils/constants';
+import {GH_TOKEN, IParsedArgs, REPO_INFO, USER_INFO} from '../utils/constants';
 import {GitRepo} from '../utils/git-repo';
 import {GithubRepo, IFile, IPullRequest, IPullRequestSearchParams} from '../utils/github-repo';
 
@@ -41,7 +41,7 @@ export class Upgradelet extends BaseUpgradelet {
   private readonly cliBuildsRepo =
       new GithubRepo(this.utils.githubUtils, REPO_INFO.ng.upstreamOwner, Upgradelet.CB_REPO_NAME);
 
-  public async checkAndUpgrade({branch = REPO_INFO.ng.defaultBranch}): Promise<void> {
+  public async checkAndUpgrade({branch = REPO_INFO.ng.defaultBranch}: IParsedArgs): Promise<void> {
     const cleanUpFns: Array<() => unknown> = [];
 
     try {
@@ -116,7 +116,7 @@ export class Upgradelet extends BaseUpgradelet {
     }
   }
 
-  public async checkOnly({branch = REPO_INFO.ng.defaultBranch}): Promise<boolean> {
+  public async checkOnly({branch = REPO_INFO.ng.defaultBranch}: IParsedArgs): Promise<boolean> {
     try {
       this.utils.logger.info(`Checking cli command docs sources for angular.io.`);
       return !(await this.checkNeedsUpgrade(branch)).needsUpgrade;
