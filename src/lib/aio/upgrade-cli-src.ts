@@ -226,6 +226,9 @@ export class Upgradelet extends BaseUpgradelet {
   }
 
   private async reportError(action: string, err: unknown): Promise<void> {
+    const errorStr = this.stringifyError(err);
+    this.utils.logger.error(errorStr);
+
     if (!Upgradelet.REPORT_ERRORS) {
       return;
     }
@@ -237,7 +240,7 @@ export class Upgradelet extends BaseUpgradelet {
 
     const title = `[${Upgradelet.LOCAL_BRANCH_PREFIX}] Error while ${action}`;
     const body =
-      codeBlock('Error', this.stringifyError(err)) +
+      codeBlock('Error', errorStr) +
       '\n##\n' +
       codeBlock('Logs', this.utils.logger.getLogs().join('\n'));
 
