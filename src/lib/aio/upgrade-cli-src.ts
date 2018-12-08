@@ -94,7 +94,11 @@ export class Upgradelet extends BaseUpgradelet {
         map(branchName => openPrsPerBranch.get(branchName)!).
         reduce((aggr, prs) => aggr.concat(prs), []).
         sort((a, b) => a.number - b.number);
+      const upstreamBranchLink = this.getMdLinkForBranch(this.upstreamRepo, ngBranch);
+      const cliBuildsBranchLink = this.getMdLinkForBranch(this.cliBuildsRepo, cliBranch);
       const commitMsgBody = [
+        `Updating ${upstreamBranchLink} from ${cliBuildsBranchLink}.` +
+        '',
         `Relevant changes in [commit range](${this.cliBuildsRepo.getCompareUrl(currentSha, latestSha)}):`,
         '',
         this.stringifyAffectedFiles(affectedFiles),
@@ -209,6 +213,10 @@ export class Upgradelet extends BaseUpgradelet {
 
     localRepo.fetch(GitRepo.UPSTREAM, branch, {depth: '1'});
     localRepo.checkout('FETCH_HEAD', {b: localBranch});
+  }
+
+  private getMdLinkForBranch(repo: GithubRepo, branch: string): string {
+    return `[${repo.name}#${branch}](${repo.getBranchUrl(branch)})`;
   }
 
   private async getOpenPrsPerBranch(branches: string[]): Promise<Map<string, IPullRequest[]>> {

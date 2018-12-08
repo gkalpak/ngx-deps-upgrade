@@ -105,6 +105,10 @@ export class GithubRepo {
       then(branches => branches.map(branch  => branch.name));
   }
 
+  public getBranchUrl(branch: string): string {
+    return `${this.baseUrl}/tree/${branch}`;
+  }
+
   public getCompareUrl(baseSha: string, headSha: string): string {
     return `${this.baseUrl}/compare/${baseSha}...${headSha}`;
   }
