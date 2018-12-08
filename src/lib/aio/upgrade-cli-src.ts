@@ -60,12 +60,13 @@ export class Upgradelet extends BaseUpgradelet {
       this.utils.logger.info(`Upgrade needed: ${currentSha} --> ${latestSha}`);
 
       // Initialize local repo clone.
-      const localBranch = `${Upgradelet.LOCAL_BRANCH_PREFIX}--${branch}--${latestSha}`;
+      const localBranchPrefix = `${Upgradelet.LOCAL_BRANCH_PREFIX}--${branch}--`;
+      const localBranch = `${localBranchPrefix}${latestSha}`;
       const commitMsgSubject = `${Upgradelet.COMMIT_MESSAGE_PREFIX}${latestSha}`;
       const localRepo = this.initLocalRepo();
       cleanUpFns.push(() => localRepo.destroy());
 
-      // Update/Clean up old PRs.
+      // Update/Clean up old PRs (regardless of target branch).
       const relevantBranches = localRepo.
         getRemoteBranches(GitRepo.ORIGIN).
         filter(branchName => branchName.startsWith(Upgradelet.LOCAL_BRANCH_PREFIX));
@@ -87,7 +88,10 @@ export class Upgradelet extends BaseUpgradelet {
       this.makeChanges(localRepo, currentSha, latestSha);
 
       // Submit PR.
-      const supercededPrs = Array.from(openPrsPerBranch.values()).
+      const relevantBranchesWithOpenPrsForTargetBranch = relevantBranchesWithOpenPrs.
+        filter(branchName => branchName.startsWith(localBranchPrefix));
+      const supercededPrs = relevantBranchesWithOpenPrsForTargetBranch.
+        map(branchName => openPrsPerBranch.get(branchName)!).
         reduce((aggr, prs) => aggr.concat(prs), []).
         sort((a, b) => a.number - b.number);
       const commitMsgBody = [
