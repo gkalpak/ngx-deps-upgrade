@@ -67,8 +67,7 @@ export class Upgradelet extends BaseUpgradelet {
       cleanUpFns.push(() => localRepo.destroy());
 
       // Update/Clean up old PRs (regardless of target branch).
-      const relevantBranches = localRepo.
-        getRemoteBranches(GitRepo.ORIGIN).
+      const relevantBranches = (await this.originRepo.getBranchNames()).
         filter(branchName => branchName.startsWith(Upgradelet.LOCAL_BRANCH_PREFIX));
       const openPrsPerBranch = await this.getOpenPrsPerBranch(relevantBranches);
       const relevantBranchesWithOpenPrs = Array.from(openPrsPerBranch.keys());
