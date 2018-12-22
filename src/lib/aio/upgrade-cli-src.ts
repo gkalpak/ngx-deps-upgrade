@@ -175,18 +175,18 @@ export class Upgradelet extends BaseUpgradelet {
       case 'master':
         return {ngBranch: branchSpec, cliBranch: branchSpec};
       case 'stable':
-        const ngLatestTagCmd = `npm info ${REPO_INFO.ng.npmPackage} dist-tags.latest`;
-        this.utils.logger.debug(`EXEC: ${ngLatestTagCmd}`);
+        const allNgBranches = await this.upstreamRepo.getBranchNames();
+        const stableNgBranchMatch = allNgBranches.
+          map(branchName => branchName.match(/^(\d+)\.(\d+)\.x$/)).
+          filter((match): match is NonNullable<typeof match> => match !== null).
+          sort(([, majorA, minorA], [, majorB, minorB]) => (+majorA - +majorB) || (+minorA - +minorB)).
+          pop();
 
-        const ngLatestTag = (sh.exec(ngLatestTagCmd, {silent: true}) as sh.ExecOutputReturnValue).stdout.trim();
-        const ngVersionMatch = ngLatestTag.match(/^(\d+)\.(\d+)\.\d+/);
-
-        if (!ngVersionMatch) {
-          throw new Error(`No valid latest tag found for 'npm:${REPO_INFO.ng.npmPackage}': ${ngLatestTag}`);
+        if (!stableNgBranchMatch) {
+          throw new Error(`Stable branch not found among upstream branches: ${allNgBranches.join(', ')}`);
         }
 
-        const [, ngMajor, ngMinor] = ngVersionMatch;
-        const stableNgBranch = `${ngMajor}.${ngMinor}.x`;
+        const [stableNgBranch, ngMajor] = stableNgBranchMatch;
 
         const cliBranches = await this.cliBuildsRepo.getBranchNames();
         const stableCliBranchRe = new RegExp(`^${ngMajor}\\.(\\d+)\\.x$`);
