@@ -26,6 +26,7 @@ export class Upgradelet extends BaseUpgradelet {
   private static readonly AIO_SCRIPT_RE = /^node \S+ ([\da-f]+)$/;
   private static readonly LOCAL_BRANCH_PREFIX = parse(__filename).name;
   private static readonly COMMIT_MESSAGE_PREFIX = 'build(docs-infra): upgrade cli command docs sources to ';
+  private static readonly PR_MILESTONE = 'docs-infra-tooling';
   private static readonly PR_LABELS = [
     'comp: build & ci',
     'comp: docs-infra',
@@ -375,6 +376,7 @@ export class Upgradelet extends BaseUpgradelet {
 
     const targetLabel = `PR target: ${(upstreamBranch === 'master') ? 'master-only' : 'patch-only'}`;
     await this.ignoreError(() => this.upstreamRepo.addLabels(pr.number, [...Upgradelet.PR_LABELS, targetLabel]));
+    await this.ignoreError(() => this.upstreamRepo.setMilestone(pr.number, Upgradelet.PR_MILESTONE));
 
     return pr;
   }
