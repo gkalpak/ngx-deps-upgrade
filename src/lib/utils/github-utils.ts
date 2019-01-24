@@ -53,6 +53,16 @@ export class GithubUtils {
           then(moreItems => [...items, ...moreItems]));
   }
 
+  public patch<T extends IJsonResponse>(
+      pathname: string,
+      params?: IRequestParams,
+      payload?: object,
+      extraHeaders?: OutgoingHttpHeaders,
+  ): Promise<T> {
+    const partialUrl = this.buildPartialUrl(pathname, params);
+    return this.request<T>('patch', partialUrl, payload, extraHeaders);
+  }
+
   public post<T extends IJsonResponse>(
       pathname: string,
       params?: IRequestParams,
