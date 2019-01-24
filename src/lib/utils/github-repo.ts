@@ -25,6 +25,12 @@ export interface IIssue {
   title: string;
 }
 
+export interface IMilestone {
+  number: number;
+  title: string;
+  description: string | null;
+}
+
 export interface IPullRequest extends IIssue {
   statuses_url: string;
 }
@@ -98,6 +104,11 @@ export class GithubRepo {
       then(labels => labels.map(label => label.name));
   }
 
+  public getAvailableMilestones(): Promise<IMilestone[]> {
+    const pathname = `repos/${this.owner}/${this.name}/milestones`;
+    return this.githubUtils.getPaginated<IMilestone>(pathname);
+  }
+
   public getBranchNames(): Promise<string[]> {
     const pathname = `repos/${this.owner}/${this.name}/branches`;
     return this.githubUtils.
@@ -145,6 +156,34 @@ export class GithubRepo {
   public getPullRequests(searchParams: IPullRequestSearchParams = {}): Promise<IPullRequest[]> {
     const pathname = `repos/${this.owner}/${this.name}/pulls`;
     return this.githubUtils.getPaginated(pathname, searchParams);
+  }
+
+  public async setMilestone(
+      issueOrPrNumber: number,
+      milestoneNumberOrTitle: number | string,
+      checkExist = true,
+  ): Promise<void> {
+    const originalMilestoneNumberOrTitle = milestoneNumberOrTitle;
+    const isMilestoneTitle = typeof milestoneNumberOrTitle === 'string';
+
+    if (checkExist || isMilestoneTitle) {
+      const availableMilestones = await this.getAvailableMilestones();
+
+      if (isMilestoneTitle) {
+        const milestone = availableMilestones.find(ms => ms.title === milestoneNumberOrTitle);
+        milestoneNumberOrTitle = milestone ? milestone.number : -1;
+      }
+
+      if (!availableMilestones.some(ms => ms.number === milestoneNumberOrTitle)) {
+        throw new Error(`No milestone set. Refusing to set non-existent milestone: ${originalMilestoneNumberOrTitle}`);
+      }
+    }
+
+    const pathname = `repos/${this.owner}/${this.name}/issues/${issueOrPrNumber}`;
+
+    return this.githubUtils.
+      patch(pathname, undefined, {milestone: milestoneNumberOrTitle}).
+      then(() => undefined);
   }
 
   private decodeBase64(input: string): string {
