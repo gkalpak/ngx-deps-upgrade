@@ -28,6 +28,7 @@ export class Upgradelet extends BaseUpgradelet {
   private static readonly COMMIT_MESSAGE_PREFIX = 'build(docs-infra): upgrade cli command docs sources to ';
   private static readonly PR_MILESTONE = 'docs-infra-tooling';
   private static readonly PR_LABELS = [
+    'aio: preview',
     'comp: build & ci',
     'comp: docs-infra',
     'PR action: review',
