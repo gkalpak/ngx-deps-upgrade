@@ -29,9 +29,11 @@ export class Upgradelet extends BaseUpgradelet {
   private static readonly PR_MILESTONE = 'docs-infra-tooling';
   private static readonly PR_LABELS = [
     'aio: preview',
-    'comp: build & ci',
-    'comp: docs-infra',
+    'comp: docs',
+    'effort1: hours',
+    'risk: low',
     'PR action: review',
+    'type: feature',
   ];
   private static readonly REPORT_ERRORS = !!process.env.CI;
 
