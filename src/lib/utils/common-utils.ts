@@ -18,6 +18,8 @@ export const group = <T extends {[key: string]: unknown}, U extends keyof T>(ite
   return groupped;
 };
 
+export const sleep = (duration: number): Promise<void> => new Promise(resolve => setTimeout(resolve, duration));
+
 export const stripIndentation = (input: string): string => {
   const lines = input.replace(/^ *\n/, '').replace(/\n *$/, '').split('\n');
   const minIndentation = Math.min(...lines.

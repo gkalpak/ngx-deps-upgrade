@@ -5,7 +5,7 @@ import {tmpdir} from 'os';
 import {join, parse} from 'path';
 import * as sh from 'shelljs';
 import {BaseUpgradelet} from '../utils/base-upgradelet';
-import {capitalize, group, stripIndentation} from '../utils/common-utils';
+import {capitalize, group, sleep, stripIndentation} from '../utils/common-utils';
 import {GH_TOKEN, IParsedArgs, REPO_INFO, USER_INFO} from '../utils/constants';
 import {GitRepo} from '../utils/git-repo';
 import {GithubRepo, IFile, IPullRequest, IPullRequestSearchParams} from '../utils/github-repo';
@@ -379,6 +379,9 @@ export class Upgradelet extends BaseUpgradelet {
 
     const targetLabel = `PR target: ${(upstreamBranch === 'master') ? 'master-only' : 'patch-only'}`;
     await this.ignoreError(() => this.upstreamRepo.addLabels(pr.number, [...Upgradelet.PR_LABELS, targetLabel]));
+
+    // Wait before setting the milestone, in order to avoid race-conditions with other triaging bots.
+    await sleep(10000);
     await this.ignoreError(() => this.upstreamRepo.setMilestone(pr.number, Upgradelet.PR_MILESTONE));
 
     return pr;
