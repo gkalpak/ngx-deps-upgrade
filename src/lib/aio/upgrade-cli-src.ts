@@ -381,7 +381,7 @@ export class Upgradelet extends BaseUpgradelet {
     await this.ignoreError(() => this.upstreamRepo.addLabels(pr.number, [...Upgradelet.PR_LABELS, targetLabel]));
 
     // Wait before setting the milestone, in order to avoid race-conditions with other triaging bots.
-    await sleep(10000);
+    await sleep(30000);
     await this.ignoreError(() => this.upstreamRepo.setMilestone(pr.number, Upgradelet.PR_MILESTONE));
 
     return pr;
