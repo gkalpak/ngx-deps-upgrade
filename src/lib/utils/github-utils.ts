@@ -23,6 +23,15 @@ export class GithubUtils {
   ) {
   }
 
+  public delete<T extends IJsonResponse>(
+      pathname: string,
+      params?: IRequestParams,
+      extraHeaders?: OutgoingHttpHeaders,
+  ): Promise<T> {
+    const partialUrl = this.buildPartialUrl(pathname, params);
+    return this.request<T>('delete', partialUrl, undefined, extraHeaders);
+  }
+
   public get<T extends IJsonResponse>(
       pathname: string,
       params?: IRequestParams,
