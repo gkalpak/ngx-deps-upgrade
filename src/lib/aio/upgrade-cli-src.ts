@@ -27,13 +27,17 @@ export class Upgradelet extends BaseUpgradelet {
   private static readonly LOCAL_BRANCH_PREFIX = parse(__filename).name;
   private static readonly COMMIT_MESSAGE_PREFIX = 'build(docs-infra): upgrade cli command docs sources to ';
   private static readonly PR_MILESTONE = 'docs-infra-tooling';
-  private static readonly PR_LABELS = [
+  private static readonly PR_LABELS_NEW = [
     'aio: preview',
     'comp: docs',
     'effort1: hours',
     'risk: low',
     'PR action: review',
     'type: feature',
+  ];
+  private static readonly PR_LABELS_SUPERCEDED = [
+    'PR action: merge',
+    'PR action: merge-assistance',
   ];
   private static readonly REPORT_ERRORS = !!process.env.CI;
 
@@ -111,9 +115,9 @@ export class Upgradelet extends BaseUpgradelet {
       this.commitAndPush(localRepo, `${commitMsgSubject}\n\n${commitMsgBody}\n`);
       const newPr = await this.submitPullRequest(localBranch, ngBranch, commitMsgSubject, commitMsgBody);
 
-      // Comment on superceded PRs.
+      // Mark PRs as superceded.
       // (Do not close them, in case the latest SHA is broken.)
-      await this.ignoreError(() => this.commentOnSupercededPrs(supercededPrs, newPr));
+      await this.ignoreError(() => this.markPrsAsSuperceded(supercededPrs, newPr));
 
       this.utils.logger.info(`Upgrade completed successfully \\o/ | PR: #${newPr.number} (${newPr.html_url})`);
     } catch (err) {
@@ -157,11 +161,6 @@ export class Upgradelet extends BaseUpgradelet {
     this.utils.logger.info(`  Cleaning up obsolete branches: ${branchesWithoutOpenPrs.join(', ')}`);
 
     branchesWithoutOpenPrs.forEach(branch => localRepo.deleteRemoteBranch(GitRepo.ORIGIN, branch));
-  }
-
-  private async commentOnSupercededPrs(supercededPrs: IPullRequest[], newPr: IPullRequest): Promise<void> {
-    const supercededComment = `Superceded by #${newPr.number}.`;
-    await Promise.all(supercededPrs.map(pr => this.upstreamRepo.comment(pr.number, supercededComment)));
   }
 
   private commitAndPush(localRepo: GitRepo, commitMsg: string): void {
@@ -275,6 +274,16 @@ export class Upgradelet extends BaseUpgradelet {
     sh.sed('-i', new RegExp(currentSha, 'g'), latestSha, join(localRepo.directory, Upgradelet.AIO_PKG_PATH));
   }
 
+  private async markPrsAsSuperceded(supercededPrs: IPullRequest[], newPr: IPullRequest): Promise<void> {
+    // Comment on superceded PRs and remove the "merge" labels.
+    const supercededComment = `Superceded by #${newPr.number}.`;
+    await supercededPrs.reduce(async (prev, pr) => {
+      await prev;
+      await this.upstreamRepo.comment(pr.number, supercededComment);
+      await this.upstreamRepo.removeLabels(pr.number, Upgradelet.PR_LABELS_SUPERCEDED);
+    }, Promise.resolve());
+  }
+
   private async reportError(action: string, err: unknown): Promise<void> {
     const errorStr = this.stringifyError(err);
     this.utils.logger.error(errorStr);
@@ -378,7 +387,7 @@ export class Upgradelet extends BaseUpgradelet {
     const pr = await this.upstreamRepo.createPullRequest(head, upstreamBranch, title, body);
 
     const targetLabel = `PR target: ${(upstreamBranch === 'master') ? 'master-only' : 'patch-only'}`;
-    await this.ignoreError(() => this.upstreamRepo.addLabels(pr.number, [...Upgradelet.PR_LABELS, targetLabel]));
+    await this.ignoreError(() => this.upstreamRepo.addLabels(pr.number, [...Upgradelet.PR_LABELS_NEW, targetLabel]));
 
     // Wait before setting the milestone, in order to avoid race-conditions with other triaging bots.
     await sleep(30000);
