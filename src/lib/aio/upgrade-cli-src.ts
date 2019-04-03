@@ -90,17 +90,34 @@ export class Upgradelet extends BaseUpgradelet {
         return;
       }
 
-      // Make changes.
-      this.createLocalBranch(localRepo, localBranch, ngBranch);
-      this.makeChanges(localRepo, currentSha, latestSha);
-
-      // Submit PR.
+      // Find PRs that would be superceded by the new PR.
       const relevantBranchesWithOpenPrsForTargetBranch = relevantBranchesWithOpenPrs.
         filter(branchName => branchName.startsWith(localBranchPrefix));
       const supercededPrs = relevantBranchesWithOpenPrsForTargetBranch.
         map(branchName => openPrsPerBranch.get(branchName)!).
         reduce((aggr, prs) => aggr.concat(prs), []).
         sort((a, b) => a.number - b.number);
+
+      // Check is there are changes since the SHA of the latest PR for the target branch.
+      if (supercededPrs.length > 0) {
+        const latestPr = supercededPrs[supercededPrs.length];
+        const latestPrSha = this.getShaForPr(openPrsPerBranch, latestPr.number, localBranchPrefix)!;
+        const affectedFilesSinceLatestPr =
+            await this.getAffectedFilesBetweenShas(this.cliBuildsRepo, latestPrSha, latestSha);
+
+        if (affectedFilesSinceLatestPr.length === 0) {
+          this.utils.logger.info(
+              'No upgrade needed. ' +
+              `No 'help/**' files changed between ${latestPrSha} (in PR #${latestPr.number}) and ${latestSha}.`);
+          return;
+        }
+      }
+
+      // Make changes.
+      this.createLocalBranch(localRepo, localBranch, ngBranch);
+      this.makeChanges(localRepo, currentSha, latestSha);
+
+      // Submit PR.
       const upstreamBranchLink = this.getMdLinkForBranch(this.upstreamRepo, ngBranch);
       const cliBuildsBranchLink = this.getMdLinkForBranch(this.cliBuildsRepo, cliBranch);
       const commitMsgBody = [
@@ -145,12 +162,7 @@ export class Upgradelet extends BaseUpgradelet {
   private async checkNeedsUpgrade(ngBranch: string, cliBranch: string): Promise<IUpgradeCheckResults> {
     const currentSha = await this.retrieveShaFromAio(ngBranch);
     const latestSha = await this.retrieveShaFromCliBuilds(cliBranch);
-    const affectedFiles = [];
-
-    if (!this.shasMatch(currentSha, latestSha)) {
-      const allAffectedFiles = await this.cliBuildsRepo.getAffectedFiles(currentSha, latestSha);
-      affectedFiles.push(...allAffectedFiles.filter(file => file.filename.startsWith('help/')));
-    }
+    const affectedFiles = await this.getAffectedFilesBetweenShas(this.cliBuildsRepo, currentSha, latestSha);
 
     return {currentSha, latestSha, affectedFiles, needsUpgrade: affectedFiles.length > 0};
   }
@@ -217,6 +229,17 @@ export class Upgradelet extends BaseUpgradelet {
     localRepo.checkout('FETCH_HEAD', {b: localBranch});
   }
 
+  private async getAffectedFilesBetweenShas(repo: GithubRepo, sha1: string, sha2: string): Promise<IFile[]> {
+    const affectedFiles: IFile[] = [];
+
+    if (!this.shasMatch(sha1, sha2)) {
+      const allAffectedFiles = await repo.getAffectedFiles(sha1, sha2);
+      affectedFiles.push(...allAffectedFiles.filter(file => file.filename.startsWith('help/')));
+    }
+
+    return affectedFiles;
+  }
+
   private getMdLinkForBranch(repo: GithubRepo, branch: string): string {
     return `[${repo.name}#${branch}](${repo.getBranchUrl(branch)})`;
   }
@@ -237,6 +260,20 @@ export class Upgradelet extends BaseUpgradelet {
       filter(([_, prs]) => prs.length > 0);
 
     return new Map(entries);
+  }
+
+  private getShaForPr(
+      openPrsPerBranch: Map<string, IPullRequest[]>,
+      prNumber: number,
+      branchPrefix: string,
+  ): string | null {
+    for (const [branch, prs] of openPrsPerBranch) {
+      if (branch.startsWith(branchPrefix) && prs.some(pr => pr.number === prNumber)) {
+        return branch.slice(branchPrefix.length);
+      }
+    }
+
+    return null;
   }
 
   private async ignoreError(fn: () => unknown): Promise<void> {
