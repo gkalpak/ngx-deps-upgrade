@@ -142,6 +142,13 @@ export class GithubRepo {
     return this.githubUtils.get(pathname, {ref});
   }
 
+  public getLabels(issueOrPrNumber: number): Promise<string[]> {
+    const pathname = `repos/${this.owner}/${this.name}/issues/${issueOrPrNumber}/labels`;
+    return this.githubUtils.
+      getPaginated<{name: string}>(pathname).
+      then(labels => labels.map(label => label.name));
+  }
+
   public getLatestSha(branch: string): Promise<string> {
     const partialUrl = `repos/${this.owner}/${this.name}/commits/${branch}`;
     const extraHeaders = {Accept: 'application/vnd.github.VERSION.sha'};
@@ -156,6 +163,18 @@ export class GithubRepo {
   public getPullRequests(searchParams: IPullRequestSearchParams = {}): Promise<IPullRequest[]> {
     const pathname = `repos/${this.owner}/${this.name}/pulls`;
     return this.githubUtils.getPaginated(pathname, searchParams);
+  }
+
+  public async removeLabels(issueOrPrNumber: number, labels: string[]): Promise<void> {
+    if (labels.length === 0) return;
+
+    const existingLabels = await this.getLabels(issueOrPrNumber);
+    const labelsToRemove = labels.filter(label => existingLabels.includes(label));
+
+    const pathnamePrefix = `repos/${this.owner}/${this.name}/issues/${issueOrPrNumber}/labels/`;
+    const pathnames = labelsToRemove.map(label => `${pathnamePrefix}${label}`);
+
+    await Promise.all(pathnames.map(pathname => this.githubUtils.delete(pathname)));
   }
 
   public async setMilestone(
