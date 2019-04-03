@@ -97,6 +97,8 @@ export class Upgradelet extends BaseUpgradelet {
         map(branchName => openPrsPerBranch.get(branchName)!).
         reduce((aggr, prs) => aggr.concat(prs), []).
         sort((a, b) => a.number - b.number);
+      const mdHorizontalSeparator = '\n##';
+      const extraCommitMsgBody = [];
 
       // Check is there are changes since the SHA of the latest PR for the target branch.
       if (supercededPrs.length > 0) {
@@ -111,6 +113,13 @@ export class Upgradelet extends BaseUpgradelet {
               `No 'help/**' files changed between ${latestPrSha} (in PR #${latestPr.number}) and ${latestSha}.`);
           return;
         }
+
+        extraCommitMsgBody.push(
+            mdHorizontalSeparator,
+            `Relevant changes in [commit range](${this.cliBuildsRepo.getCompareUrl(latestPrSha, latestSha)}) since ` +
+            `PR #${latestPr.number}:`,
+            '',
+            this.stringifyAffectedFiles(affectedFilesSinceLatestPr));
       }
 
       // Make changes.
@@ -121,12 +130,13 @@ export class Upgradelet extends BaseUpgradelet {
       const upstreamBranchLink = this.getMdLinkForBranch(this.upstreamRepo, ngBranch);
       const cliBuildsBranchLink = this.getMdLinkForBranch(this.cliBuildsRepo, cliBranch);
       const commitMsgBody = [
-        `Updating ${upstreamBranchLink} from ${cliBuildsBranchLink}.` +
-        '',
+        `Updating ${upstreamBranchLink} from ${cliBuildsBranchLink}.`,
+        mdHorizontalSeparator,
         `Relevant changes in [commit range](${this.cliBuildsRepo.getCompareUrl(currentSha, latestSha)}):`,
         '',
         this.stringifyAffectedFiles(affectedFiles),
-        '',
+        ...extraCommitMsgBody,
+        mdHorizontalSeparator,
         ...supercededPrs.map(pr => `Closes #${pr.number}`),
       ].join('\n').trim();
       this.commitAndPush(localRepo, `${commitMsgSubject}\n\n${commitMsgBody}\n`);
