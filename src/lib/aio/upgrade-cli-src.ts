@@ -102,7 +102,7 @@ export class Upgradelet extends BaseUpgradelet {
 
       // Check is there are changes since the SHA of the latest PR for the target branch.
       if (supercededPrs.length > 0) {
-        const latestPr = supercededPrs[supercededPrs.length];
+        const latestPr = supercededPrs[supercededPrs.length - 1];
         const latestPrSha = this.getShaForPr(openPrsPerBranch, latestPr.number, localBranchPrefix)!;
         const affectedFilesSinceLatestPr =
             await this.getAffectedFilesBetweenShas(this.cliBuildsRepo, latestPrSha, latestSha);
