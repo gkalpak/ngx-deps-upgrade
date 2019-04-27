@@ -18,6 +18,6 @@ install:
 script:
   - npm test;
   - if ([[ "$TRAVIS_TEST_RESULT" == "0" ]] && [[ "$TRAVIS_EVENT_TYPE" == "cron" ]]); then
-      npm start -- --branch=master;
-      npm start -- --branch=stable;
+      npm start -- --branch=master --logsUrl=$TRAVIS_BUILD_WEB_URL;
+      npm start -- --branch=stable --logsUrl=$TRAVIS_BUILD_WEB_URL;
     fi
