@@ -7,6 +7,7 @@ const pkg = require('../../../package.json');
 
 export interface IParsedArgs {
   branch?: 'master' | 'stable';
+  logsUrl?: string;
   [key: string]: unknown;
 }
 

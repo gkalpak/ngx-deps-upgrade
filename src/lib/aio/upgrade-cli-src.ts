@@ -48,7 +48,7 @@ export class Upgradelet extends BaseUpgradelet {
   private readonly cliBuildsRepo =
       new GithubRepo(this.utils.githubUtils, REPO_INFO.ng.upstreamOwner, Upgradelet.CB_REPO_NAME);
 
-  public async checkAndUpgrade({branch = REPO_INFO.ng.defaultBranch}: IParsedArgs): Promise<void> {
+  public async checkAndUpgrade({branch = REPO_INFO.ng.defaultBranch, logsUrl}: IParsedArgs): Promise<void> {
     const cleanUpFns: Array<() => unknown> = [];
 
     try {
@@ -148,7 +148,7 @@ export class Upgradelet extends BaseUpgradelet {
 
       this.utils.logger.info(`Upgrade completed successfully \\o/ | PR: #${newPr.number} (${newPr.html_url})`);
     } catch (err) {
-      await this.ignoreError(() => this.reportError('checking and upgrading', err));
+      await this.ignoreError(() => this.reportError('checking and upgrading', err, logsUrl));
       throw err;
     } finally {
       // Perform clean-up (in reverse "chronological" order).
@@ -158,13 +158,13 @@ export class Upgradelet extends BaseUpgradelet {
     }
   }
 
-  public async checkOnly({branch = REPO_INFO.ng.defaultBranch}: IParsedArgs): Promise<boolean> {
+  public async checkOnly({branch = REPO_INFO.ng.defaultBranch, logsUrl}: IParsedArgs): Promise<boolean> {
     try {
       this.utils.logger.info(`Checking cli command docs sources for angular.io.`);
       const {ngBranch, cliBranch} = await this.computeBranches(branch);
       return !(await this.checkNeedsUpgrade(ngBranch, cliBranch)).needsUpgrade;
     } catch (err) {
-      await this.ignoreError(() => this.reportError('checking only', err));
+      await this.ignoreError(() => this.reportError('checking only', err, logsUrl));
       throw err;
     }
   }
@@ -331,7 +331,7 @@ export class Upgradelet extends BaseUpgradelet {
     }, Promise.resolve());
   }
 
-  private async reportError(action: string, err: unknown): Promise<void> {
+  private async reportError(action: string, err: unknown, logsUrl?: string): Promise<void> {
     const errorStr = this.stringifyError(err);
     this.utils.logger.error(errorStr);
 
@@ -345,10 +345,11 @@ export class Upgradelet extends BaseUpgradelet {
       `**${header}:**\n\`\`\`\n${stripIndentation(code)}\n\`\`\`\n`;
 
     const title = `[${Upgradelet.LOCAL_BRANCH_PREFIX}] Error while ${action}`;
+    const logsHeader = logsUrl ? `[Logs](${logsUrl})` : 'Logs';
     const body =
       codeBlock('Error', errorStr) +
       '\n##\n' +
-      codeBlock('Logs', this.utils.logger.getLogs().join('\n'));
+      codeBlock(logsHeader, this.utils.logger.getLogs().join('\n'));
 
     const thisRepo = new GithubRepo(this.utils.githubUtils, REPO_INFO.own.originOwner, REPO_INFO.own.originName);
     await thisRepo.createIssue(title, body);
