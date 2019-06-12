@@ -2,7 +2,11 @@ import {request, RequestOptions} from 'https';
 import {parse, Url} from 'url';
 import {Logger} from './logger';
 
-export type IJsonResponse = Array<unknown> | {[key: string]: unknown};
+export interface IJsonObject {
+  [key: string]: unknown;
+}
+
+export type IJsonResponse = unknown[] | IJsonObject;
 
 export class HttpsUtils {
   constructor(private readonly logger: Logger) {

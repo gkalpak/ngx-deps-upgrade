@@ -10,7 +10,7 @@ export abstract class BaseUpgradelet {
    * @return A promise that resolves once `checkAndUpgrade()` has finished.
    */
   public static async main(): Promise<void> {
-    const upgradelet = new (this as unknown as {new(): BaseUpgradelet})();
+    const upgradelet = new (this as unknown as new() => BaseUpgradelet)();
     await upgradelet.checkAndUpgrade(PARSED_ARGS);
   }
 

@@ -1,14 +1,15 @@
 import {stripIndentation} from './common-utils';
 import {GithubUtils, IRequestParams} from './github-utils';
+import {IJsonObject} from './https-utils';
 
-export interface IFile {
+export interface IFile extends IJsonObject {
   contents_url: string;
   filename: string;
   sha: string;
   status: 'added' | 'modified' | 'removed';
 }
 
-export interface IFileContents {
+export interface IFileContents extends IJsonObject {
   content?: string;
   encoding?: 'base64';
   name: string;
@@ -18,14 +19,14 @@ export interface IFileContents {
   type: 'dir' | 'file' | 'submodule';
 }
 
-export interface IIssue {
+export interface IIssue extends IJsonObject {
   html_url: string;
   number: number;
   state: 'closed' | 'open';
   title: string;
 }
 
-export interface IMilestone {
+export interface IMilestone extends IJsonObject {
   number: number;
   title: string;
   description: string | null;

@@ -13,21 +13,21 @@ A private collection of utilities and scripts to help in keeping specific depend
 
 The following test-types/modes are available:
 
-- **Code-linting:** `npm run lint`
+- **Code-linting:** `npm run lint`<br />
   _Lint TypeScript files using TSLint._
 
-- **Unit tests:** `npm run test-unit`
+- **Unit tests:** `npm run test-unit`<br />
   _Run all the unit tests once. These tests are quick and suitable to be run on every change._
 
-- **E2E tests:** `npm run test-e2e`
+- **E2E tests:** `npm run test-e2e`<br />
   _Run all the end-to-end tests once. These test may hit actual API endpoints or perform expensive
   I/O operations and are considerably slower than unit tests._
 
-- **All tests:** `npm test` / `npm run test`
+- **All tests:** `npm test` / `npm run test`<br />
   _Run all of the above tests (code-linting, unit tests, e2e tests). This command is automatically
   run before every release (via `npm run release`)._
 
-- **"Dev" mode:** `npm run dev`
+- **"Dev" mode:** `npm run dev`<br />
   _Watch all files and rerun the unit tests whenever something changes. For performance reasons,
   code-linting and e2e tests are omitted._
 

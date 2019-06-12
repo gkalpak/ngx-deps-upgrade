@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import stripAnsi = require('strip-ansi');
+import stripAnsi from 'strip-ansi';
 
 export const enum LogLevel {
   debug = 1,
