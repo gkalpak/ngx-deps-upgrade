@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 
+
 export const enum LogLevel {
   debug = 1,
   info,

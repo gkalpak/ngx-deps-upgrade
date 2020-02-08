@@ -4,6 +4,7 @@ import {GH_TOKEN_NAMES, VERSION_STAMP} from './constants';
 import {HttpsUtils, IJsonResponse} from './https-utils';
 import {Logger} from './logger';
 
+
 export interface IRequestParams {
   [key: string]: string | number | undefined;
 }

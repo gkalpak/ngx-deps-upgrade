@@ -1,5 +1,6 @@
 import {NEWLINE_PLACEHOLDER} from './constants';
 
+
 export function main() {
   let data = '';
 

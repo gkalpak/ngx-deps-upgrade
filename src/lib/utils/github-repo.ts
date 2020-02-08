@@ -2,6 +2,7 @@ import {stripIndentation} from './common-utils';
 import {GithubUtils, IRequestParams} from './github-utils';
 import {IJsonObject} from './https-utils';
 
+
 export interface IFile extends IJsonObject {
   contents_url: string;
   filename: string;

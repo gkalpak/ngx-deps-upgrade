@@ -5,6 +5,7 @@ import {resolve} from 'path';
 // tslint:disable-next-line: no-var-requires
 const pkg = require('../../../package.json');
 
+
 export interface IParsedArgs {
   branch?: 'master' | 'stable';
   logsUrl?: string;

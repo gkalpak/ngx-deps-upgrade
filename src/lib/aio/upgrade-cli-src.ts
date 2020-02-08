@@ -12,6 +12,7 @@ import {GithubRepo, IFile, IPullRequest, IPullRequestSearchParams} from '../util
 
 sh.set('-e');
 
+
 interface IUpgradeCheckResults {
   currentSha: string;
   latestSha: string;

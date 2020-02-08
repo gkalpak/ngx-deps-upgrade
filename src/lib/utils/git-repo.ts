@@ -3,6 +3,7 @@ import * as sh from 'shelljs';
 import {NEWLINE_PLACEHOLDER} from '../utils/constants';
 import {Logger} from './logger';
 
+
 export interface ICommnandOptions {
   [key: string]: boolean | string | string[];
 }

@@ -2,6 +2,7 @@ import {request, RequestOptions} from 'https';
 import {parse, Url} from 'url';
 import {Logger} from './logger';
 
+
 export interface IJsonObject {
   [key: string]: unknown;
 }
