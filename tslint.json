@@ -17,6 +17,7 @@
     "no-skipped-test": true,
     "object-literal-key-quotes": [true, "as-needed"],
     "quotemark": [true, "single"],
+    "semicolon": [true, "always"],
     "variable-name": [true, "allow-leading-underscore", "allow-trailing-underscore", "ban-keywords", "check-format"]
   },
   "rulesDirectory": [

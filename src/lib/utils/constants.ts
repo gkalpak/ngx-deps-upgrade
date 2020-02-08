@@ -1,4 +1,4 @@
-import * as minimist from 'minimist';
+import minimist from 'minimist';
 import {resolve} from 'path';
 
 // TS can't cope with files outside the `rootDir`.

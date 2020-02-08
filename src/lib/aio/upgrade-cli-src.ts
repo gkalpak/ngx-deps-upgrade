@@ -49,7 +49,7 @@ export class Upgradelet extends BaseUpgradelet {
       new GithubRepo(this.utils.githubUtils, REPO_INFO.ng.upstreamOwner, Upgradelet.CB_REPO_NAME);
 
   public async checkAndUpgrade({branch = REPO_INFO.ng.defaultBranch, logsUrl}: IParsedArgs): Promise<void> {
-    const cleanUpFns: Array<() => unknown> = [];
+    const cleanUpFns: (() => unknown)[] = [];
 
     try {
       this.utils.logger.info(`Checking and upgrading cli command docs sources for angular.io.`);

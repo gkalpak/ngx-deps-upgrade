@@ -1,3 +1,3 @@
 describe('ngx-deps-upgrade', () => {
-  it('should have tests');
+  it('should have unit tests');
 });

@@ -12,6 +12,7 @@
     "noUnusedLocals": true,
     "declaration": true,
     "declarationMap": true,
+    "esModuleInterop": true,
     "importHelpers": true,
     "resolveJsonModule": true,
     "newLine": "lf"

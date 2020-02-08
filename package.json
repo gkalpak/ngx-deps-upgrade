@@ -13,7 +13,7 @@
     "build": "npm run ~~build",
     "prebuild-watch": "npm run prebuild",
     "build-watch": "npm run ~~build-watch",
-    "clean-out": "node --eval \"require('shelljs').rm('-rf', 'out/');\"",
+    "clean-out": "node --eval \"require('shelljs/global'); set('-e'); rm('-rf', 'out/');\"",
     "predev": "npm run build || true",
     "dev": "run-p ~~build-watch ~~test-unit-watch",
     "lint": "tslint --project tsconfig.json",
@@ -40,24 +40,24 @@
     "url": "git+https://github.com/gkalpak/ngx-deps-upgrade.git"
   },
   "dependencies": {
-    "chalk": "^2.4.2",
+    "chalk": "^3.0.0",
     "minimist": "^1.2.0",
     "shelljs": "^0.8.3",
-    "strip-ansi": "^5.2.0",
+    "strip-ansi": "^6.0.0",
     "tslib": "^1.10.0"
   },
   "devDependencies": {
-    "@types/jasmine": "^3.3.13",
+    "@types/jasmine": "^3.5.3",
     "@types/minimist": "^1.2.0",
-    "@types/node": "^10.14.9",
-    "@types/shelljs": "^0.8.5",
-    "@types/strip-ansi": "^3.0.0",
-    "jasmine": "^3.4.0",
+    "@types/node": "^13.7.0",
+    "@types/shelljs": "^0.8.6",
+    "@types/strip-ansi": "^5.2.1",
+    "jasmine": "^3.5.0",
     "npm-run-all": "^4.1.5",
-    "source-map-support": "^0.5.12",
-    "tslint": "^5.17.0",
+    "source-map-support": "^0.5.16",
+    "tslint": "^6.0.0",
     "tslint-jasmine-noSkipOrFocus": "^1.0.9",
-    "typescript": "^3.5.1",
+    "typescript": "^3.7.5",
     "watch": "^1.0.2"
   },
   "private": true

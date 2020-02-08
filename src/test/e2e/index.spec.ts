@@ -1,3 +1,3 @@
 describe('ngx-deps-upgrade', () => {
-  it('should have tests');
+  it('should have e2e tests');
 });
