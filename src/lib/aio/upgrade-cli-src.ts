@@ -217,30 +217,19 @@ export class Upgradelet extends BaseUpgradelet {
   private async computeBranchesForNgMajorVersion(
       ngMajorVersion?: IIntegerString,
   ): Promise<{ngBranch: string, cliBranch: string}> {
-    const findMatchingBranch = async (repo: GithubRepo, majorVersionPattern: string) => {
-      const repoBranches = await repo.getBranchNames();
-      const branchRe = new RegExp(`^(${majorVersionPattern})\\.(\\d+)\\.x$`);
-      const branchMatch = repoBranches.
-        map(branch => branchRe.exec(branch)).
-        filter((match): match is NonNullable<typeof match> => match !== null).
-        sort(([, majorA, minorA], [, majorB, minorB]) => (+majorA - +majorB) || (+minorA - +minorB)).
-        pop();
-
-      if (!branchMatch) {
-        throw new Error(
-            `No branch found matching '${branchRe}' among '${repo.slug}' branches: ${repoBranches.join(', ')}`);
-      }
-
-      return branchMatch;
-    };
-
-    const ngMajorVersionPattern = (ngMajorVersion !== undefined) ? ngMajorVersion : '\\d+';
-    const [ngBranch, ngBranchMajorVersion] = await findMatchingBranch(this.upstreamRepo, ngMajorVersionPattern);
-
-    const cliMajorVersionPattern = ngBranchMajorVersion;
-    const [cliBranch] = await findMatchingBranch(this.cliBuildsRepo, cliMajorVersionPattern);
+    const {branch: ngBranch, major: ngMajor} = await this.findBranchForMajorVersion(this.upstreamRepo, ngMajorVersion);
+    const {branch: cliBranch} = await this.findBranchForMajorVersion(this.cliBuildsRepo, ngMajor);
 
     return {ngBranch, cliBranch};
+  }
+
+  private async computePrTargetLabel(upstreamRepo: GithubRepo, upstreamBranch: string): Promise<string> {
+    const target =  (upstreamBranch === 'master') ?
+      'master-only' : (upstreamBranch === (await this.findBranchForMajorVersion(upstreamRepo)).branch) ?
+      'patch-only' :
+      'LTS-only';
+
+    return `PR target: ${target}`;
   }
 
   private createLocalBranch(localRepo: GitRepo, localBranch: string, branch: string): void {
@@ -248,6 +237,32 @@ export class Upgradelet extends BaseUpgradelet {
 
     localRepo.fetch(GitRepo.UPSTREAM, branch, {depth: '1'});
     localRepo.checkout('FETCH_HEAD', {b: localBranch});
+  }
+
+  private async findBranchForMajorVersion(
+      repo: GithubRepo,
+      majorVersion?: IIntegerString,
+  ): Promise<{branch: string, major: IIntegerString, minor: IIntegerString}> {
+    const repoBranches = await repo.getBranchNames();
+    const majorVersionPattern = (majorVersion !== undefined) ? majorVersion : '\\d+';
+    const branchRe = new RegExp(`^(${majorVersionPattern})\\.(\\d+)\\.x$`);
+
+    const branchMatch = repoBranches.
+      map(branch => branchRe.exec(branch)).
+      filter((match): match is NonNullable<typeof match> => match !== null).
+      sort(([, majorA, minorA], [, majorB, minorB]) => (+majorA - +majorB) || (+minorA - +minorB)).
+      pop();
+
+    if (!branchMatch) {
+      throw new Error(
+        `No branch found matching '${branchRe}' among '${repo.slug}' branches: ${repoBranches.join(', ')}`);
+    }
+
+    return {
+      branch: branchMatch[0],
+      major: branchMatch[1] as IIntegerString,
+      minor: branchMatch[2] as IIntegerString,
+    };
   }
 
   private async getAffectedFilesBetweenShas(repo: GithubRepo, sha1: string, sha2: string): Promise<IFile[]> {
@@ -462,7 +477,7 @@ export class Upgradelet extends BaseUpgradelet {
     const head = `${this.originRepo.owner}:${originBranch}`;
     const pr = await this.upstreamRepo.createPullRequest(head, upstreamBranch, title, body);
 
-    const targetLabel = `PR target: ${(upstreamBranch === 'master') ? 'master-only' : 'patch-only'}`;
+    const targetLabel = await this.computePrTargetLabel(this.upstreamRepo, upstreamBranch);
     await this.ignoreError(() => this.upstreamRepo.addLabels(pr.number, [...Upgradelet.PR_LABELS_NEW, targetLabel]));
 
     // Wait before setting the milestone, in order to avoid race-conditions with other triaging bots.
