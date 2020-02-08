@@ -200,6 +200,8 @@ export class Upgradelet extends BaseUpgradelet {
     switch (branchSpec) {
       case 'master':
         return {ngBranch: branchSpec, cliBranch: branchSpec};
+      case 'patch':
+        return this.computeBranchesForNgMajorVersion();
       case 'stable':
         return this.computeBranchesForNgMajorVersion(this.getLatestMajorVersion('@angular/core'));
       default:
@@ -209,28 +211,30 @@ export class Upgradelet extends BaseUpgradelet {
   }
 
   private async computeBranchesForNgMajorVersion(
-      ngMajorVersion: IIntegerString,
+      ngMajorVersion?: IIntegerString,
   ): Promise<{ngBranch: string, cliBranch: string}> {
-    const findMatchingBranch = async (repo: GithubRepo) => {
+    const findMatchingBranch = async (repo: GithubRepo, majorVersionPattern: string) => {
       const repoBranches = await repo.getBranchNames();
-      const branchRe = new RegExp(`^${ngMajorVersion}\\.(\\d+)\\.x$`);
-      const foundBranch = repoBranches.
+      const branchRe = new RegExp(`^(${majorVersionPattern})\\.(\\d+)\\.x$`);
+      const branchMatch = repoBranches.
         map(branch => branchRe.exec(branch)).
         filter((match): match is NonNullable<typeof match> => match !== null).
-        sort(([, minorA], [, minorB]) => +minorA - +minorB).
-        map(([branch]) => branch).
+        sort(([, majorA, minorA], [, majorB, minorB]) => (+majorA - +majorB) || (+minorA - +minorB)).
         pop();
 
-      if (!foundBranch) {
+      if (!branchMatch) {
         throw new Error(
             `No branch found matching '${branchRe}' among '${repo.slug}' branches: ${repoBranches.join(', ')}`);
       }
 
-      return foundBranch;
+      return branchMatch;
     };
 
-    const ngBranch = await findMatchingBranch(this.upstreamRepo);
-    const cliBranch = await findMatchingBranch(this.cliBuildsRepo);
+    const ngMajorVersionPattern = (ngMajorVersion !== undefined) ? ngMajorVersion : '\\d+';
+    const [ngBranch, ngBranchMajorVersion] = await findMatchingBranch(this.upstreamRepo, ngMajorVersionPattern);
+
+    const cliMajorVersionPattern = ngBranchMajorVersion;
+    const [cliBranch] = await findMatchingBranch(this.cliBuildsRepo, cliMajorVersionPattern);
 
     return {ngBranch, cliBranch};
   }
