@@ -11,7 +11,7 @@ export type IBrandedType<T, B extends string> = T & {_brand: B};
 export type IIntegerString = IBrandedType<string, 'IntegerString'>;
 
 export interface IParsedArgs {
-  branch?: 'master' | 'patch' | 'stable';
+  branch?: 'master' | 'patch' | 'stable' | IIntegerString;
   logsUrl?: string;
   [key: string]: unknown;
 }

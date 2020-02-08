@@ -5,7 +5,7 @@ import {tmpdir} from 'os';
 import {join, parse} from 'path';
 import * as sh from 'shelljs';
 import {BaseUpgradelet} from '../utils/base-upgradelet';
-import {capitalize, group, sleep, stripIndentation} from '../utils/common-utils';
+import {capitalize, group, isIntegerString, sleep, stripIndentation} from '../utils/common-utils';
 import {GH_TOKEN, IIntegerString, IParsedArgs, REPO_INFO, USER_INFO} from '../utils/constants';
 import {GitRepo} from '../utils/git-repo';
 import {GithubRepo, IFile, IPullRequest, IPullRequestSearchParams} from '../utils/github-repo';
@@ -205,6 +205,10 @@ export class Upgradelet extends BaseUpgradelet {
       case 'stable':
         return this.computeBranchesForNgMajorVersion(this.getLatestMajorVersion('@angular/core'));
       default:
+        if (isIntegerString(branchSpec)) {
+          return this.computeBranchesForNgMajorVersion(branchSpec);
+        }
+
         throw new Error(
           `Unexpected 'branch' value (${branchSpec}). Expected an integer or one of: master, patch, stable`);
     }

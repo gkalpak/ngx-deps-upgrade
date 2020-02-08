@@ -1,3 +1,6 @@
+import {IIntegerString} from './constants';
+
+
 export const capitalize = (input: string): string => {
   return input[0].toUpperCase() + input.slice(1);
 };
@@ -17,6 +20,8 @@ export const group = <T extends {[key: string]: unknown}, U extends keyof T>(ite
 
   return groupped;
 };
+
+export const isIntegerString = (input: string): input is IIntegerString => /^\d+$/.test(input);
 
 export const sleep = (duration: number): Promise<void> => new Promise(resolve => setTimeout(resolve, duration));
 
