@@ -41,8 +41,11 @@ export class GitRepo {
     // Commit.
     this.execInRepo(`git commit`, {...opts, message: tempMsgArg});
 
-    // Postprocess commit message.
-    this.execInRepo(`git filter-branch --msg-filter "node ${GitRepo.FIX_COMMIT_MESSAGE_NEWLINES_SCRIPT_PATH}" @~1..@`);
+    // Postprocess commit message (and squelch `filter-branch` warning).
+    this.execInRepo(
+      `git filter-branch --msg-filter "node ${GitRepo.FIX_COMMIT_MESSAGE_NEWLINES_SCRIPT_PATH}" @~1..@`,
+      undefined,
+      {FILTER_BRANCH_SQUELCH_WARNING: '1'});
   }
 
   public config(key: string, value: string): void {
@@ -119,7 +122,11 @@ export class GitRepo {
     }
   }
 
-  private execInRepo(partialCmd: string, opts?: ICommnandOptions): sh.ExecOutputReturnValue {
+  private execInRepo(
+      partialCmd: string,
+      cmdOpts?: ICommnandOptions,
+      envVars?: NodeJS.ProcessEnv,
+  ): sh.ExecOutputReturnValue {
     if (this.destroyed) {
       throw new Error('Repository already destroyed.');
     }
@@ -127,10 +134,15 @@ export class GitRepo {
     try {
       sh.pushd('-q', this.directory);
 
-      const cmd = this.withOptions(partialCmd.trim(), opts);
-      this.logger.debug(`GIT: ${cmd}`);
+      const cmd = this.withOptions(partialCmd.trim(), cmdOpts);
+      const env = envVars && {...process.env, ...envVars};
 
-      const result = sh.exec(cmd, {silent: true}) as sh.ExecOutputReturnValue;
+      const envVarStr = !envVars ?
+        '' :
+        ` (${Object.entries(envVars).map(([key, val]) => `${key}=${JSON.stringify(val)}`).join(', ')})`;
+      this.logger.debug(`GIT: ${cmd}${envVarStr}`);
+
+      const result = sh.exec(cmd, {env, silent: true}) as sh.ExecOutputReturnValue;
 
       result.stdout.
         split('\n').
