@@ -120,7 +120,9 @@ export class Upgradelet extends BaseUpgradelet {
             `Relevant changes in [commit range](${this.cliBuildsRepo.getCompareUrl(latestPrSha, latestSha)}) since ` +
             `PR #${latestPr.number}:`,
             '',
-            this.stringifyAffectedFiles(affectedFilesSinceLatestPr));
+            this.stringifyAffectedFiles(affectedFilesSinceLatestPr),
+            mdHorizontalSeparator,
+            ...supercededPrs.map(pr => `Closes #${pr.number}`));
       }
 
       // Make changes.
@@ -137,8 +139,6 @@ export class Upgradelet extends BaseUpgradelet {
         '',
         this.stringifyAffectedFiles(affectedFiles),
         ...extraCommitMsgBody,
-        mdHorizontalSeparator,
-        ...supercededPrs.map(pr => `Closes #${pr.number}`),
       ].join('\n').trim();
       this.commitAndPush(localRepo, `${commitMsgSubject}\n\n${commitMsgBody}\n`);
       const newPr = await this.submitPullRequest(localBranch, ngBranch, commitMsgSubject, commitMsgBody);
