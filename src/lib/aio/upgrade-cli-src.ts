@@ -69,7 +69,7 @@ export class Upgradelet extends BaseUpgradelet {
       this.utils.logger.info(`Upgrade needed: ${currentSha} --> ${latestSha}`);
 
       // Initialize local repo clone.
-      const localBranchPrefix = `${Upgradelet.LOCAL_BRANCH_PREFIX}--${branch}--`;
+      const localBranchPrefix = `${Upgradelet.LOCAL_BRANCH_PREFIX}--${ngBranch}--`;
       const localBranch = `${localBranchPrefix}${latestSha}`;
       const commitMsgSubject = `${Upgradelet.COMMIT_MESSAGE_PREFIX}${latestSha}`;
       const localRepo = this.initLocalRepo();
