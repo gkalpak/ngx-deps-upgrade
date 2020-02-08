@@ -6,7 +6,7 @@ import {join, parse} from 'path';
 import * as sh from 'shelljs';
 import {BaseUpgradelet} from '../utils/base-upgradelet';
 import {capitalize, group, sleep, stripIndentation} from '../utils/common-utils';
-import {GH_TOKEN, IParsedArgs, REPO_INFO, USER_INFO} from '../utils/constants';
+import {GH_TOKEN, IIntegerString, IParsedArgs, REPO_INFO, USER_INFO} from '../utils/constants';
 import {GitRepo} from '../utils/git-repo';
 import {GithubRepo, IFile, IPullRequest, IPullRequestSearchParams} from '../utils/github-repo';
 
@@ -201,36 +201,38 @@ export class Upgradelet extends BaseUpgradelet {
       case 'master':
         return {ngBranch: branchSpec, cliBranch: branchSpec};
       case 'stable':
-        const allNgBranches = await this.upstreamRepo.getBranchNames();
-        const stableNgBranchMatch = allNgBranches.
-          map(branchName => branchName.match(/^(\d+)\.(\d+)\.x$/)).
-          filter((match): match is NonNullable<typeof match> => match !== null).
-          sort(([, majorA, minorA], [, majorB, minorB]) => (+majorA - +majorB) || (+minorA - +minorB)).
-          pop();
-
-        if (!stableNgBranchMatch) {
-          throw new Error(`Stable branch not found among upstream branches: ${allNgBranches.join(', ')}`);
-        }
-
-        const [stableNgBranch, ngMajor] = stableNgBranchMatch;
-
-        const cliBranches = await this.cliBuildsRepo.getBranchNames();
-        const stableCliBranchRe = new RegExp(`^${ngMajor}\\.(\\d+)\\.x$`);
-        const stableCliBranch = cliBranches.
-          map(branch => branch.match(stableCliBranchRe)).
-          filter((match): match is RegExpMatchArray => !!match).
-          sort(([b1, cliMinor1], [b2, cliMinor2]) => +cliMinor1 - +cliMinor2).
-          map(([branch]) => branch).
-          pop();
-
-        if (!stableCliBranch) {
-          throw new Error(`No 'cli-builds' branch found matching '${stableCliBranchRe}'.`);
-        }
-
-        return {ngBranch: stableNgBranch, cliBranch: stableCliBranch};
+        return this.computeBranchesForNgMajorVersion(this.getLatestMajorVersion('@angular/core'));
       default:
-        throw new Error(`Unexpected 'branch' value (${branchSpec}). Expected one of: master, stable.`);
+        throw new Error(
+          `Unexpected 'branch' value (${branchSpec}). Expected an integer or one of: master, patch, stable`);
     }
+  }
+
+  private async computeBranchesForNgMajorVersion(
+      ngMajorVersion: IIntegerString,
+  ): Promise<{ngBranch: string, cliBranch: string}> {
+    const findMatchingBranch = async (repo: GithubRepo) => {
+      const repoBranches = await repo.getBranchNames();
+      const branchRe = new RegExp(`^${ngMajorVersion}\\.(\\d+)\\.x$`);
+      const foundBranch = repoBranches.
+        map(branch => branchRe.exec(branch)).
+        filter((match): match is NonNullable<typeof match> => match !== null).
+        sort(([, minorA], [, minorB]) => +minorA - +minorB).
+        map(([branch]) => branch).
+        pop();
+
+      if (!foundBranch) {
+        throw new Error(
+            `No branch found matching '${branchRe}' among '${repo.slug}' branches: ${repoBranches.join(', ')}`);
+      }
+
+      return foundBranch;
+    };
+
+    const ngBranch = await findMatchingBranch(this.upstreamRepo);
+    const cliBranch = await findMatchingBranch(this.cliBuildsRepo);
+
+    return {ngBranch, cliBranch};
   }
 
   private createLocalBranch(localRepo: GitRepo, localBranch: string, branch: string): void {
@@ -249,6 +251,23 @@ export class Upgradelet extends BaseUpgradelet {
     }
 
     return affectedFiles;
+  }
+
+  private getLatestMajorVersion(packageName: string): IIntegerString {
+    const cmd = `npm info ${packageName} dist-tags.latest`;
+    this.utils.logger.debug(`RUN: ${cmd}`);
+
+    const version = sh.exec(cmd, {silent: true}).trim();
+    const versionRe = /^(\d+)\.\d+\.\d+.*$/;
+    const versionMatch = versionRe.exec(version);
+
+    if (!versionMatch) {
+      throw new Error(
+        `Unable to retrieve the latest major version for package '${packageName}'. ` +
+        `(Expected: ${versionRe} | Actual: ${version})`);
+    }
+
+    return versionMatch[1] as IIntegerString;
   }
 
   private getMdLinkForBranch(repo: GithubRepo, branch: string): string {

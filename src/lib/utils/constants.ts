@@ -6,6 +6,10 @@ import {resolve} from 'path';
 const pkg = require('../../../package.json');
 
 
+export type IBrandedType<T, B extends string> = T & {_brand: B};
+
+export type IIntegerString = IBrandedType<string, 'IntegerString'>;
+
 export interface IParsedArgs {
   branch?: 'master' | 'stable';
   logsUrl?: string;
