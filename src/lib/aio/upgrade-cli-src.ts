@@ -5,7 +5,7 @@ import {tmpdir} from 'os';
 import {join, parse} from 'path';
 import * as sh from 'shelljs';
 import {BaseUpgradelet} from '../utils/base-upgradelet';
-import {capitalize, group, isIntegerString, sleep, stripIndentation} from '../utils/common-utils';
+import {capitalize, group, isIntegerString, sleep, stripIndentation, wrapText} from '../utils/common-utils';
 import {GH_TOKEN, IIntegerString, IParsedArgs, REPO_INFO, USER_INFO} from '../utils/constants';
 import {GitRepo} from '../utils/git-repo';
 import {GithubRepo, IFile, IPullRequest, IPullRequestSearchParams} from '../utils/github-repo';
@@ -140,7 +140,7 @@ export class Upgradelet extends BaseUpgradelet {
         this.stringifyAffectedFiles(affectedFiles),
         ...extraCommitMsgBody,
       ].join('\n').trim();
-      this.commitAndPush(localRepo, `${commitMsgSubject}\n\n${commitMsgBody}\n`);
+      this.commitAndPush(localRepo, `${commitMsgSubject}\n\n${wrapText(commitMsgBody, 100)}\n`);
       const newPr = await this.submitPullRequest(localBranch, ngBranch, commitMsgSubject, commitMsgBody);
 
       // Mark PRs as superceded.

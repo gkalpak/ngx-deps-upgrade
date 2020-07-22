@@ -34,3 +34,37 @@ export const stripIndentation = (input: string): string => {
 
   return lines.map(l => l.replace(re, '')).join('\n');
 };
+
+export const wrapLine = (line: string, maxLength: number) => {
+  // Split into words, but preserve Markdown links (`[...](...)`).
+  const words = line.split(/(?<=^[^[]*(?:\[[^\]]*][^\[]*)*) /).reverse();
+  const wrappedLine = [words.pop()];
+
+  while (words.length) {
+    const lastLine = wrappedLine[wrappedLine.length - 1]!;
+    const nextWord = words.pop()!;
+
+    if (lastLine.length + nextWord.length > maxLength) {
+      wrappedLine.push(nextWord);
+    } else {
+      wrappedLine[wrappedLine.length - 1] = `${lastLine} ${nextWord}`;
+    }
+  }
+
+  return wrappedLine;
+};
+
+export const wrapText = (input: string, maxLineLength: number) => {
+  const linesWithSeparators = input.split(/(\r?\n)/);
+  let wrappedText = '';
+
+  for (let i = 0, ii = linesWithSeparators.length; i < ii; i += 2) {
+    const line = linesWithSeparators[i];
+    const lineBreak = linesWithSeparators[i + 1];
+    const wrappedLine = wrapLine(line, maxLineLength);
+
+    wrappedText += wrappedLine.join(lineBreak || '\n') + (lineBreak || '');
+  }
+
+  return wrappedText;
+};
