@@ -29,16 +29,16 @@ export class Upgradelet extends BaseUpgradelet {
   private static readonly COMMIT_MESSAGE_PREFIX = 'build: upgrade cli command docs sources to ';
   private static readonly PR_MILESTONE = 'docs-infra-tooling';
   private static readonly PR_LABELS_NEW = [
+    'action: merge',
     'aio: preview',
     'comp: docs',
     'effort1: hours',
     'risk: low',
-    'PR action: merge',
     'type: feature',
   ];
   private static readonly PR_LABELS_SUPERCEDED = [
-    'PR action: merge',
-    'PR action: merge-assistance',
+    'action: merge',
+    'action: merge-assistance',
   ];
   private static readonly REPORT_ERRORS = !!process.env.CI;
 
@@ -194,6 +194,8 @@ export class Upgradelet extends BaseUpgradelet {
     localRepo.push(GitRepo.ORIGIN, {force: true});
   }
 
+  // TODO(gkalpak): Correctly handle the new versioning/branching process (esp. wrt to RCs).
+  //                See https://docs.google.com/document/d/197kVillDwx-RZtSVOBtPb4BBIAw0E9RT3q3v6DZkykU.
   private async computeBranches(
       branchSpec: NonNullable<IParsedArgs['branch']>,
   ): Promise<{ngBranch: string, cliBranch: string}> {
@@ -225,11 +227,11 @@ export class Upgradelet extends BaseUpgradelet {
 
   private async computePrTargetLabel(upstreamRepo: GithubRepo, upstreamBranch: string): Promise<string> {
     const target =  (upstreamBranch === 'master') ?
-      'master-only' : (upstreamBranch === (await this.findBranchForMajorVersion(upstreamRepo)).branch) ?
-      'patch-only' :
-      'LTS-only';
+      'minor' : (upstreamBranch === (await this.findBranchForMajorVersion(upstreamRepo)).branch) ?
+      'patch' :
+      'lts';
 
-    return `PR target: ${target}`;
+    return `target: ${target}`;
   }
 
   private createLocalBranch(localRepo: GitRepo, localBranch: string, branch: string): void {
