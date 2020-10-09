@@ -34,7 +34,6 @@ export class Upgradelet extends BaseUpgradelet {
     'comp: docs',
     'effort1: hours',
     'risk: low',
-    'type: feature',
   ];
   private static readonly PR_LABELS_SUPERCEDED = [
     'action: merge',
