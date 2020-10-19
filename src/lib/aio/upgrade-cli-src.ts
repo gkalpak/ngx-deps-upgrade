@@ -13,6 +13,12 @@ import {GithubRepo, IFile, IPullRequest, IPullRequestSearchParams} from '../util
 sh.set('-e');
 
 
+interface IBranchVersionInfo {
+  branch: string;
+  major: IIntegerString;
+  minor: IIntegerString;
+}
+
 interface IUpgradeCheckResults {
   currentSha: string;
   latestSha: string;
@@ -22,6 +28,7 @@ interface IUpgradeCheckResults {
 
 export class Upgradelet extends BaseUpgradelet {
   private static readonly CB_REPO_NAME = 'cli-builds';
+  private static readonly ROOT_PKG_PATH = 'package.json';
   private static readonly AIO_PKG_PATH = 'aio/package.json';
   private static readonly AIO_SCRIPT_NAME = 'extract-cli-command-docs';
   private static readonly AIO_SCRIPT_RE = /^node \S+ ([\da-f]+)$/;
@@ -193,44 +200,67 @@ export class Upgradelet extends BaseUpgradelet {
     localRepo.push(GitRepo.ORIGIN, {force: true});
   }
 
-  // TODO(gkalpak): Correctly handle the new versioning/branching process (esp. wrt to RCs).
-  //                See https://docs.google.com/document/d/197kVillDwx-RZtSVOBtPb4BBIAw0E9RT3q3v6DZkykU.
   private async computeBranches(
       branchSpec: NonNullable<IParsedArgs['branch']>,
   ): Promise<{ngBranch: string, cliBranch: string}> {
     switch (branchSpec) {
       case 'master':
         return {ngBranch: branchSpec, cliBranch: branchSpec};
-      case 'patch':
-        return this.computeBranchesForNgMajorVersion();
+      case 'rc':
+        return this.computeBranchesForNgVersion();
       case 'stable':
-        return this.computeBranchesForNgMajorVersion(this.getLatestMajorVersion('@angular/core'));
+        const {major, minor} = this.getLatestMajorMinorVersion('@angular/core');
+        return this.computeBranchesForNgVersion(major, minor);
       default:
         if (isIntegerString(branchSpec)) {
-          return this.computeBranchesForNgMajorVersion(branchSpec);
+          return this.computeBranchesForNgVersion(branchSpec);
         }
 
         throw new Error(
-          `Unexpected 'branch' value (${branchSpec}). Expected an integer or one of: master, patch, stable`);
+          `Unexpected 'branch' value (${branchSpec}). Expected an integer or one of: master, rc, stable`);
     }
   }
 
-  private async computeBranchesForNgMajorVersion(
+  private async computeBranchesForNgVersion(
       ngMajorVersion?: IIntegerString,
+      ngMinorVersion?: IIntegerString,
   ): Promise<{ngBranch: string, cliBranch: string}> {
-    const {branch: ngBranch, major: ngMajor} = await this.findBranchForMajorVersion(this.upstreamRepo, ngMajorVersion);
+    if ((ngMajorVersion === undefined) && (ngMinorVersion !== undefined)) {
+      throw new Error(`Missing 'ngMajorVersion' value, while 'ngMinorVersion' is defined (${ngMinorVersion}).`);
+    }
+
+    const {branch: ngBranch, major: ngMajor} = (ngMinorVersion !== undefined) ?
+      {branch: `${ngMajorVersion}.${ngMinorVersion}.x`, major: ngMajorVersion} :
+      await this.findBranchForMajorVersion(this.upstreamRepo, ngMajorVersion);
     const {branch: cliBranch} = await this.findBranchForMajorVersion(this.cliBuildsRepo, ngMajor);
 
     return {ngBranch, cliBranch};
   }
 
-  private async computePrTargetLabel(upstreamRepo: GithubRepo, upstreamBranch: string): Promise<string> {
-    const target =  (upstreamBranch === 'master') ?
-      'minor' : (upstreamBranch === (await this.findBranchForMajorVersion(upstreamRepo)).branch) ?
-      'patch' :
-      'lts';
+  private async computePrTarget(upstreamRepo: GithubRepo, upstreamBranch: string): Promise<string> {
+    if (upstreamBranch === 'master') {
+      return 'minor';
+    }
 
-    return `target: ${target}`;
+    const [{branch: highestPatchBranch}, {branch: secondHighestPatchBranch} = {branch: null}] =
+        await this.getBranchVersionInfo(upstreamRepo);
+    const {version: highestPatchVersion} =
+        JSON.parse(await upstreamRepo.getFileContents(Upgradelet.ROOT_PKG_PATH, highestPatchBranch));
+    const isHighestPatchInRc = /^\d+\.\d+\.\d+-(?:next|rc)\.\d+$/.test(highestPatchVersion);
+
+    if (upstreamBranch === highestPatchBranch) {
+      return isHighestPatchInRc ? 'rc' : 'patch';
+    }
+
+    if ((upstreamBranch === secondHighestPatchBranch) && isHighestPatchInRc) {
+      return 'patch';
+    }
+
+    return 'lts';
+  }
+
+  private async computePrTargetLabel(upstreamRepo: GithubRepo, upstreamBranch: string): Promise<string> {
+    return `target: ${await this.computePrTarget(upstreamRepo, upstreamBranch)}`;
   }
 
   private createLocalBranch(localRepo: GitRepo, localBranch: string, branch: string): void {
@@ -244,26 +274,7 @@ export class Upgradelet extends BaseUpgradelet {
       repo: GithubRepo,
       majorVersion?: IIntegerString,
   ): Promise<{branch: string, major: IIntegerString, minor: IIntegerString}> {
-    const repoBranches = await repo.getBranchNames();
-    const majorVersionPattern = (majorVersion !== undefined) ? majorVersion : '\\d+';
-    const branchRe = new RegExp(`^(${majorVersionPattern})\\.(\\d+)\\.x$`);
-
-    const branchMatch = repoBranches.
-      map(branch => branchRe.exec(branch)).
-      filter((match): match is NonNullable<typeof match> => match !== null).
-      sort(([, majorA, minorA], [, majorB, minorB]) => (+majorA - +majorB) || (+minorA - +minorB)).
-      pop();
-
-    if (!branchMatch) {
-      throw new Error(
-        `No branch found matching '${branchRe}' among '${repo.slug}' branches: ${repoBranches.join(', ')}`);
-    }
-
-    return {
-      branch: branchMatch[0],
-      major: branchMatch[1] as IIntegerString,
-      minor: branchMatch[2] as IIntegerString,
-    };
+    return (await this.getBranchVersionInfo(repo, majorVersion))[0];
   }
 
   private async getAffectedFilesBetweenShas(repo: GithubRepo, sha1: string, sha2: string): Promise<IFile[]> {
@@ -277,12 +288,31 @@ export class Upgradelet extends BaseUpgradelet {
     return affectedFiles;
   }
 
-  private getLatestMajorVersion(packageName: string): IIntegerString {
+  private async getBranchVersionInfo(repo: GithubRepo, majorVersion?: IIntegerString): Promise<IBranchVersionInfo[]> {
+    const repoBranches = await repo.getBranchNames();
+    const majorVersionPattern = (majorVersion !== undefined) ? majorVersion : '\\d+';
+    const branchRe = new RegExp(`^(${majorVersionPattern})\\.(\\d+)\\.x$`);
+
+    const branchesVersionInfo = repoBranches.
+      map(branch => branchRe.exec(branch)).
+      filter((match): match is NonNullable<typeof match> => match !== null).
+      sort(([, majorA, minorA], [, majorB, minorB]) => (+majorB - +majorA) || (+minorB - +minorA)).
+      map(([branch, major, minor]) => ({branch, major, minor} as IBranchVersionInfo));
+
+    if (branchesVersionInfo.length === 0) {
+      throw new Error(
+        `No branch found matching '${branchRe}' among '${repo.slug}' branches: ${repoBranches.join(', ')}`);
+    }
+
+    return branchesVersionInfo;
+  }
+
+  private getLatestMajorMinorVersion(packageName: string): {major: IIntegerString, minor: IIntegerString} {
     const cmd = `npm info ${packageName} dist-tags.latest`;
     this.utils.logger.debug(`RUN: ${cmd}`);
 
     const version = sh.exec(cmd, {silent: true}).trim();
-    const versionRe = /^(\d+)\.\d+\.\d+.*$/;
+    const versionRe = /^(\d+)\.(\d+)\.\d+.*$/;
     const versionMatch = versionRe.exec(version);
 
     if (!versionMatch) {
@@ -291,7 +321,7 @@ export class Upgradelet extends BaseUpgradelet {
         `(Expected: ${versionRe} | Actual: ${version})`);
     }
 
-    return versionMatch[1] as IIntegerString;
+    return {major: versionMatch[1] as IIntegerString, minor: versionMatch[2] as IIntegerString};
   }
 
   private getMdLinkForBranch(repo: GithubRepo, branch: string): string {
