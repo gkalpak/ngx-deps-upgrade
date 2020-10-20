@@ -34,6 +34,7 @@ export class Upgradelet extends BaseUpgradelet {
   private static readonly AIO_SCRIPT_RE = /^node \S+ ([\da-f]+)$/;
   private static readonly LOCAL_BRANCH_PREFIX = parse(__filename).name;
   private static readonly COMMIT_MESSAGE_PREFIX = 'build(docs-infra): upgrade cli command docs sources to ';
+  private static readonly PR_REVIEWER = 'petebacondarwin';
   private static readonly PR_MILESTONE = 'docs-infra-tooling';
   private static readonly PR_LABELS_NEW = [
     'action: merge',
@@ -507,6 +508,8 @@ export class Upgradelet extends BaseUpgradelet {
 
     const head = `${this.originRepo.owner}:${originBranch}`;
     const pr = await this.upstreamRepo.createPullRequest(head, upstreamBranch, title, body);
+
+    await this.ignoreError(() => this.upstreamRepo.requestReview(pr.number, Upgradelet.PR_REVIEWER));
 
     const targetLabel = await this.computePrTargetLabel(this.upstreamRepo, upstreamBranch);
     await this.ignoreError(() => this.upstreamRepo.addLabels(pr.number, [...Upgradelet.PR_LABELS_NEW, targetLabel]));
