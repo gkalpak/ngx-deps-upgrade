@@ -179,6 +179,12 @@ export class GithubRepo {
     await Promise.all(pathnames.map(pathname => this.githubUtils.delete(pathname)));
   }
 
+  public async requestReview(prNumber: number, ...reviewers: string[]): Promise<void> {
+    const pathname = `repos/${this.owner}/${this.name}/pulls/${prNumber}/requested_reviewers`;
+    const payload = {reviewers};
+    await this.githubUtils.post(pathname, undefined, payload);
+  }
+
   public async setMilestone(
       issueOrPrNumber: number,
       milestoneNumberOrTitle: number | string,
