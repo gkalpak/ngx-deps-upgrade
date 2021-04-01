@@ -43,10 +43,15 @@ export class Upgradelet extends BaseUpgradelet {
     'effort1: hours',
     'risk: low',
   ];
-  private static readonly PR_LABELS_SUPERCEDED = [
-    'action: merge',
-    'action: merge-assistance',
-  ];
+  private static readonly PR_LABELS_SUPERCEDED = {
+    add: [
+      'state: blocked',
+    ],
+    remove: [
+      'action: merge',
+      'action: merge-assistance',
+    ],
+  };
   private static readonly REPORT_ERRORS = !!process.env.CI;
 
   private readonly upstreamRepo =
@@ -402,7 +407,8 @@ export class Upgradelet extends BaseUpgradelet {
     await supercededPrs.reduce(async (prev, pr) => {
       await prev;
       await this.upstreamRepo.comment(pr.number, supercededComment);
-      await this.upstreamRepo.removeLabels(pr.number, Upgradelet.PR_LABELS_SUPERCEDED);
+      await this.upstreamRepo.removeLabels(pr.number, Upgradelet.PR_LABELS_SUPERCEDED.remove);
+      await this.upstreamRepo.addLabels(pr.number, Upgradelet.PR_LABELS_SUPERCEDED.add);
     }, Promise.resolve());
   }
 
