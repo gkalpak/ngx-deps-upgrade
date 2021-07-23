@@ -39,5 +39,5 @@ Things I want to (but won't necessarily) do:
 - Add more upgradelets.
 
 
-[build-status]: https://travis-ci.org/gkalpak/ngx-deps-upgrade
-[build-status-image]: https://travis-ci.org/gkalpak/ngx-deps-upgrade.svg?branch=master
+[build-status]: https://github.com/gkalpak/ngx-deps-upgrade/actions/workflows/ci.yml
+[build-status-image]: https://github.com/gkalpak/ngx-deps-upgrade/actions/workflows/ci.yml/badge.svg?branch=master&event=push
