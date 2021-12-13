@@ -370,7 +370,7 @@ export class Upgradelet extends BaseUpgradelet {
     try {
       await fn();
     } catch (err) {
-      this.utils.logger.warn(err);
+      this.utils.logger.warn((err instanceof Error) && err.message || `${err}`);
     }
   }
 
