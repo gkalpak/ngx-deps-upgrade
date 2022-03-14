@@ -202,8 +202,7 @@ export class Upgradelet extends BaseUpgradelet {
     this.utils.logger.info(`  Commiting changes and pushing to '${GitRepo.ORIGIN}'.`);
 
     localRepo.commit(commitMsg, {all: true});
-    localRepo.fetch(GitRepo.ORIGIN, {unshallow: true});
-    localRepo.push(GitRepo.ORIGIN, {force: true});
+    localRepo.push(GitRepo.ORIGIN);
   }
 
   private async computeBranches(
@@ -272,7 +271,7 @@ export class Upgradelet extends BaseUpgradelet {
   private createLocalBranch(localRepo: GitRepo, localBranch: string, branch: string): void {
     this.utils.logger.info(`  Creating local branch '${localBranch}' from '${this.upstreamRepo.slug}#${branch}'.`);
 
-    localRepo.fetch(GitRepo.UPSTREAM, branch, {depth: '1'});
+    localRepo.fetch(GitRepo.UPSTREAM, branch);
     localRepo.checkout('FETCH_HEAD', {b: localBranch});
   }
 
