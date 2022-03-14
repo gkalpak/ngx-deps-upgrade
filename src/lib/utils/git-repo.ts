@@ -5,7 +5,8 @@ import {Logger} from './logger';
 
 
 export interface ICommnandOptions {
-  [key: string]: boolean | string | string[];
+  [key: string]: boolean | string | string[] | undefined;
+  '--'?: string[];
 }
 
 export class GitRepo {
@@ -122,6 +123,10 @@ export class GitRepo {
     }
   }
 
+  public stage(files: string[], opts?: ICommnandOptions): void {
+    this.execInRepo(`git add`, {...opts, '--': files});
+  }
+
   private execInRepo(
       partialCmd: string,
       cmdOpts?: ICommnandOptions,
@@ -156,17 +161,28 @@ export class GitRepo {
   }
 
   private withOptions(cmd: string, opts?: ICommnandOptions): string {
-    const optsStr = opts && Object.keys(opts).
-      filter(key => opts[key] !== false).
-      map(key => {
-        const name = (key.length === 1) ? `-${key}` : `--${key}`;
-        const rawValue = (opts[key] === true) ? '' : opts[key] as string | string[];
-        const values = Array.isArray(rawValue) ? rawValue : [rawValue];
+    const normalizeValue = (val: true | string | string[]): string[] =>
+      (val === true) ? [''] : Array.isArray(val) ? val : [val];
 
-        return values.map(value => `${name} ${value}`.trim()).join(' ');
-      }).
-      join(' ');
+    const {'--': cmdArgs, ...cmdOpts} = opts || {};
 
-    return optsStr ? `${cmd} ${optsStr}` : cmd;
+    const normalizedCmdArgs = cmdArgs && normalizeValue(cmdArgs);
+    const normalizedCmdOpts = Object.entries(cmdOpts).
+      filter((entry): entry is [string, Exclude<ICommnandOptions[keyof ICommnandOptions], false | undefined>] =>
+        (entry[1] !== undefined) && (entry[1] !== false)).
+      map(([key, rawValue]) =>
+        [(key.length === 1) ? `-${key}` : `--${key}`, normalizeValue(rawValue)] as [string, string[]]);
+
+    if (normalizedCmdOpts.length > 0) {
+      cmd += ` ${normalizedCmdOpts.
+        map(([name, values]) => values.map(value => `${name} ${value}`.trim()).join(' ')).
+        join(' ')}`;
+    }
+
+    if (normalizedCmdArgs) {
+      cmd += ` -- ${normalizedCmdArgs.join(' ')}`;
+    }
+
+    return cmd;
   }
 }
