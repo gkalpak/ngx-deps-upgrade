@@ -61,7 +61,7 @@ export class Upgradelet extends BaseUpgradelet {
   private readonly cliBuildsRepo =
       new GithubRepo(this.utils.githubUtils, REPO_INFO.ng.upstreamOwner, Upgradelet.CB_REPO_NAME);
 
-  public async checkAndUpgrade({branch = REPO_INFO.ng.defaultBranch, logsUrl}: IParsedArgs): Promise<void> {
+  public async checkAndUpgrade({branch = 'next', logsUrl}: IParsedArgs): Promise<void> {
     const cleanUpFns: (() => unknown)[] = [];
 
     try {
@@ -171,7 +171,7 @@ export class Upgradelet extends BaseUpgradelet {
     }
   }
 
-  public async checkOnly({branch = REPO_INFO.ng.defaultBranch, logsUrl}: IParsedArgs): Promise<boolean> {
+  public async checkOnly({branch = 'next', logsUrl}: IParsedArgs): Promise<boolean> {
     try {
       this.utils.logger.info(`Checking cli command docs sources for angular.io.`);
       const {ngBranch, cliBranch} = await this.computeBranches(branch);
@@ -209,8 +209,8 @@ export class Upgradelet extends BaseUpgradelet {
       branchSpec: NonNullable<IParsedArgs['branch']>,
   ): Promise<{ngBranch: string, cliBranch: string}> {
     switch (branchSpec) {
-      case 'master':
-        return {ngBranch: branchSpec, cliBranch: branchSpec};
+      case 'next':
+        return {ngBranch: REPO_INFO.ng.defaultBranch, cliBranch: REPO_INFO.ng.defaultBranch};
       case 'rc':
         return this.computeBranchesForNgVersion();
       case 'stable':
@@ -222,7 +222,7 @@ export class Upgradelet extends BaseUpgradelet {
         }
 
         throw new Error(
-          `Unexpected 'branch' value (${branchSpec}). Expected an integer or one of: master, rc, stable`);
+          `Unexpected 'branch' value (${branchSpec}). Expected an integer or one of: next, rc, stable`);
     }
   }
 
@@ -243,7 +243,7 @@ export class Upgradelet extends BaseUpgradelet {
   }
 
   private async computePrTarget(upstreamRepo: GithubRepo, upstreamBranch: string): Promise<string> {
-    if (upstreamBranch === 'master') {
+    if (upstreamBranch === REPO_INFO.ng.defaultBranch) {
       return 'minor';
     }
 

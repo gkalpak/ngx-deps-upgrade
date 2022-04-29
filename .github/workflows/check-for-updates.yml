@@ -30,9 +30,9 @@ jobs:
           cache: npm
       - run: npm ci;
       - run: npm run build;
-      - name: Check master branch
+      - name: Check next branch
         if: ${{ !cancelled() }}
-        run: npm start -- --branch=master --logsUrl=$LOGS_URL;
+        run: npm start -- --branch=next --logsUrl=$LOGS_URL;
       - name: Check stable branch
         if: ${{ !cancelled() }}
         run: npm start -- --branch=stable --logsUrl=$LOGS_URL;
