@@ -43,7 +43,7 @@ export class Upgradelet extends BaseUpgradelet {
     'effort1: hours',
     'risk: low',
   ];
-  private static readonly PR_LABELS_SUPERCEDED = {
+  private static readonly PR_LABELS_SUPERSEDED = {
     add: [
       'state: blocked',
     ],
@@ -103,10 +103,10 @@ export class Upgradelet extends BaseUpgradelet {
         return;
       }
 
-      // Find PRs that would be superceded by the new PR.
+      // Find PRs that would be superseded by the new PR.
       const relevantBranchesWithOpenPrsForTargetBranch = relevantBranchesWithOpenPrs.
         filter(branchName => branchName.startsWith(localBranchPrefix));
-      const supercededPrs = relevantBranchesWithOpenPrsForTargetBranch.
+      const supersededPrs = relevantBranchesWithOpenPrsForTargetBranch.
         map(branchName => openPrsPerBranch.get(branchName)!).
         reduce((aggr, prs) => aggr.concat(prs), []).
         sort((a, b) => a.number - b.number);
@@ -114,8 +114,8 @@ export class Upgradelet extends BaseUpgradelet {
       const extraCommitMsgBody = [];
 
       // Check is there are changes since the SHA of the latest PR for the target branch.
-      if (supercededPrs.length > 0) {
-        const latestPr = supercededPrs[supercededPrs.length - 1];
+      if (supersededPrs.length > 0) {
+        const latestPr = supersededPrs[supersededPrs.length - 1];
         const latestPrSha = this.getShaForPr(openPrsPerBranch, latestPr.number, localBranchPrefix)!;
         const affectedFilesSinceLatestPr =
             await this.getAffectedFilesBetweenShas(this.cliBuildsRepo, latestPrSha, latestSha);
@@ -134,7 +134,7 @@ export class Upgradelet extends BaseUpgradelet {
             '',
             this.stringifyAffectedFiles(affectedFilesSinceLatestPr),
             mdHorizontalSeparator,
-            ...supercededPrs.map(pr => `Closes #${pr.number}`));
+            ...supersededPrs.map(pr => `Closes #${pr.number}`));
       }
 
       // Make changes.
@@ -155,9 +155,9 @@ export class Upgradelet extends BaseUpgradelet {
       this.commitAndPush(localRepo, `${commitMsgSubject}\n\n${wrapText(commitMsgBody, 100)}\n`);
       const newPr = await this.submitPullRequest(localBranch, ngBranch, commitMsgSubject, commitMsgBody);
 
-      // Mark PRs as superceded.
+      // Mark PRs as superseded.
       // (Do not close them, in case the latest SHA is broken.)
-      await this.ignoreError(() => this.markPrsAsSuperceded(supercededPrs, newPr));
+      await this.ignoreError(() => this.markPrsAsSuperseded(supersededPrs, newPr));
 
       this.utils.logger.info(`Upgrade completed successfully \\o/ | PR: #${newPr.number} (${newPr.html_url})`);
     } catch (err) {
@@ -400,14 +400,14 @@ export class Upgradelet extends BaseUpgradelet {
     sh.sed('-i', new RegExp(currentSha, 'g'), latestSha, join(localRepo.directory, Upgradelet.AIO_PKG_PATH));
   }
 
-  private async markPrsAsSuperceded(supercededPrs: IPullRequest[], newPr: IPullRequest): Promise<void> {
-    // Comment on superceded PRs and remove the "merge" labels.
-    const supercededComment = `Superceded by #${newPr.number}.`;
-    await supercededPrs.reduce(async (prev, pr) => {
+  private async markPrsAsSuperseded(supersededPrs: IPullRequest[], newPr: IPullRequest): Promise<void> {
+    // Comment on superseded PRs and remove the "merge" labels.
+    const supersededComment = `Superseded by #${newPr.number}.`;
+    await supersededPrs.reduce(async (prev, pr) => {
       await prev;
-      await this.upstreamRepo.comment(pr.number, supercededComment);
-      await this.upstreamRepo.removeLabels(pr.number, Upgradelet.PR_LABELS_SUPERCEDED.remove);
-      await this.upstreamRepo.addLabels(pr.number, Upgradelet.PR_LABELS_SUPERCEDED.add);
+      await this.upstreamRepo.comment(pr.number, supersededComment);
+      await this.upstreamRepo.removeLabels(pr.number, Upgradelet.PR_LABELS_SUPERSEDED.remove);
+      await this.upstreamRepo.addLabels(pr.number, Upgradelet.PR_LABELS_SUPERSEDED.add);
     }, Promise.resolve());
   }
 
